@@ -1,0 +1,111 @@
+/* ==========================================================================
+   COLOR TOKENS — Single source of truth for all platform colors.
+   All colors use OKLCH for perceptually uniform adjustments.
+   Import this file in app/globals.css BEFORE the @theme block.
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------
+     BRAND — Primary action color (indigo). Used for CTAs, links,
+     active states, focus rings, and primary UI elements.
+     ------------------------------------------------------------------ */
+  --color-brand-50:  oklch(97%   0.015 255);
+  --color-brand-100: oklch(93%   0.04  255);
+  --color-brand-200: oklch(87%   0.08  255);
+  --color-brand-300: oklch(78%   0.13  255);
+  --color-brand-400: oklch(68%   0.19  255);
+  --color-brand-500: oklch(60%   0.23  255); /* Primary — bright blue-indigo */
+  --color-brand-600: oklch(52%   0.23  255); /* Hover */
+  --color-brand-700: oklch(43%   0.21  255);
+  --color-brand-800: oklch(34%   0.18  255);
+  --color-brand-900: oklch(25%   0.14  255);
+  --color-brand-950: oklch(16%   0.10  255);
+
+  /* ------------------------------------------------------------------
+     ACCENT — Secondary highlight (amber). Use sparingly: Pro/Premium
+     badges, featured gig ribbons, achievement highlights.
+     ------------------------------------------------------------------ */
+  --color-accent-50:  oklch(98%  0.01  80);
+  --color-accent-100: oklch(95%  0.04  80);
+  --color-accent-200: oklch(90%  0.09  80);
+  --color-accent-300: oklch(87%  0.14  80);
+  --color-accent-400: oklch(82%  0.18  80);
+  --color-accent-500: oklch(74%  0.20  80); /* Accent */
+  --color-accent-600: oklch(65%  0.20  80);
+  --color-accent-700: oklch(55%  0.18  80);
+
+  /* ------------------------------------------------------------------
+     SEMANTIC — Success, Warning, Danger, Info
+     ------------------------------------------------------------------ */
+  --color-success-50:  oklch(97%  0.03  145);
+  --color-success-100: oklch(95%  0.06  145);
+  --color-success-500: oklch(62%  0.19  145);
+  --color-success-600: oklch(54%  0.18  145);
+  --color-success-700: oklch(45%  0.16  145);
+
+  --color-warning-50:  oklch(98%  0.02   65);
+  --color-warning-100: oklch(96%  0.05   65);
+  --color-warning-500: oklch(72%  0.18   65);
+  --color-warning-600: oklch(63%  0.18   65);
+
+  --color-danger-50:   oklch(97%  0.02   25);
+  --color-danger-100:  oklch(95%  0.04   25);
+  --color-danger-500:  oklch(56%  0.22   25);
+  --color-danger-600:  oklch(48%  0.22   25);
+  --color-danger-700:  oklch(40%  0.20   25);
+
+  --color-info-50:     oklch(97%  0.015 220);
+  --color-info-100:    oklch(93%  0.04  220);
+  --color-info-500:    oklch(56%  0.22  220);
+
+  /* ------------------------------------------------------------------
+     NEUTRAL — Slate-tinted neutrals for backgrounds, borders, text.
+     The 264 hue tint keeps them in harmony with the brand color.
+     ------------------------------------------------------------------ */
+
+  /* Backgrounds */
+  --color-surface:          oklch(100%  0     0);     /* Pure white — card/panel bg */
+  --color-surface-subtle:   oklch(97.5% 0.003 264);  /* Page background */
+  --color-surface-muted:    oklch(94%   0.005 264);  /* Hover, divider, input bg */
+  --color-surface-emphasis: oklch(90%   0.008 264);  /* Active nav item bg */
+
+  /* Borders */
+  --color-border:           oklch(89%   0.008 264);  /* Default border */
+  --color-border-strong:    oklch(80%   0.012 264);  /* Emphasized border */
+  --color-border-focus:     var(--color-brand-500);   /* Focus ring */
+
+  /* Text */
+  --color-text-primary:     oklch(15%   0.01  264);  /* Headings, body */
+  --color-text-secondary:   oklch(40%   0.015 264);  /* Subheadings, labels */
+  --color-text-tertiary:    oklch(60%   0.01  264);  /* Placeholders, captions */
+  --color-text-disabled:    oklch(70%   0.008 264);  /* Disabled state */
+  --color-text-inverse:     oklch(100%  0     0);    /* Text on dark bg */
+  --color-text-brand:       var(--color-brand-500);   /* Brand-colored text */
+  --color-text-danger:      var(--color-danger-600);  /* Error text */
+  --color-text-success:     var(--color-success-600); /* Success text */
+  --color-text-warning:     var(--color-warning-600); /* Warning text */
+
+  /* ------------------------------------------------------------------
+     OVERLAY & SCRIM
+     ------------------------------------------------------------------ */
+  --color-overlay:    oklch(0% 0 0 / 0.48);  /* Modal backdrop */
+  --color-scrim:      oklch(0% 0 0 / 0.24);  /* Tooltip backdrop */
+}
+
+/* Dark mode — reserved for future dark theme.
+   Token names stay identical; values flip. */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="dark"] {
+    --color-surface:          oklch(12%   0.005 264);
+    --color-surface-subtle:   oklch(10%   0.004 264);
+    --color-surface-muted:    oklch(16%   0.006 264);
+    --color-surface-emphasis: oklch(20%   0.008 264);
+    --color-border:           oklch(24%   0.01  264);
+    --color-border-strong:    oklch(32%   0.012 264);
+    --color-text-primary:     oklch(94%   0.005 264);
+    --color-text-secondary:   oklch(70%   0.01  264);
+    --color-text-tertiary:    oklch(52%   0.008 264);
+    --color-text-disabled:    oklch(38%   0.006 264);
+    --color-text-inverse:     oklch(15%   0.01  264);
+  }
+}
