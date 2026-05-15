@@ -1,11 +1,10 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
 // ============================================================
 // ENUMS
 // ============================================================
@@ -1291,4 +1290,31 @@ model DataDeletionRequest {
   createdAt           DateTime  @default(now()) @map("created_at")
 
   @@map("data_deletion_requests")
+}
+
+// ============================================================
+// ADMIN PERMISSIONS
+// ============================================================
+
+model AdminPermission {
+  id          String   @id @default(cuid())
+  role        String
+  permissions String[] @default([])
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById String?  @map("updated_by_id")
+
+  @@unique([role])
+  @@map("admin_permissions")
+}
+
+model UserPermissionOverride {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  permission  String
+  granted     Boolean
+  grantedById String?  @map("granted_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, permission])
+  @@map("user_permission_overrides")
 }
