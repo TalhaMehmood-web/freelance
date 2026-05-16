@@ -1,0 +1,1257 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  id               String                    @id @default(cuid())
+  userId           String                    @unique @map("user_id")
+  username         String                    @unique
+  fullName         String                    @map("full_name")
+  avatarUrl        String?                   @map("avatar_url")
+  bio              String?
+  roles            String[]                  @default(["buyer"])
+  country          String?
+  timezone         String?
+  phone            String?
+  phoneVerified    Boolean                   @default(false) @map("phone_verified")
+  createdAt        DateTime                  @default(now()) @map("created_at")
+  updatedAt        DateTime                  @updatedAt @map("updated_at")
+  blockedAt        DateTime?                 @map("blocked_at")
+  blockedBy        String?                   @map("blocked_by")
+  isBlocked        Boolean                   @default(false) @map("is_blocked")
+  isSuperAdmin     Boolean                   @default(false) @map("is_super_admin")
+  apiKeyCreations  ApiKey[]                  @relation("ApiKeyCreator")
+  approvedItems    ApprovalRequest[]         @relation("ApprovalApprover")
+  pendingApprovals ApprovalRequest[]         @relation("ApprovalRequester")
+  auditLogs        AuditLog[]                @relation("AuditLogActor")
+  briefTemplates   BriefTemplate[]
+  budgetSettings   BuyerBudgetSettings?
+  verification     BuyerVerification?
+  conversations    ConversationParticipant[]
+  deletionRequests DataDeletionRequest[]
+  jobPosts         JobPost[]
+  messages         Message[]
+  notifications    Notification[]
+  buyerOrders      Order[]                   @relation("OrderClient")
+  sellerOrders     Order[]                   @relation("OrderFreelancer")
+  orgMemberships   OrgMember[]
+  ownedOrgs        Organization[]            @relation("OrgOwner")
+  buyerProjects    Project[]                 @relation("ProjectBuyer")
+  proposals        Proposal[]                @relation("ProposalBuyer")
+  reviewsReceived  Review[]                  @relation("ReviewReviewee")
+  reviewsGiven     Review[]                  @relation("ReviewReviewer")
+  savedGigs        SavedGig[]
+  savedSearches    SavedSearch[]
+  sellerProfile    SellerProfile?
+  shortlists       TalentShortlist[]
+
+  @@map("profiles")
+}
+
+model SellerProfile {
+  id                       String             @id @default(cuid())
+  userId                   String             @unique @map("user_id")
+  displayName              String             @map("display_name")
+  professionalTitle        String             @map("professional_title")
+  overview                 String?
+  profilePhotoUrl          String?            @map("profile_photo_url")
+  languages                Json               @default("[]")
+  skills                   Json               @default("[]")
+  education                Json               @default("[]")
+  certifications           Json               @default("[]")
+  portfolioLinks           Json               @default("[]") @map("portfolio_links")
+  accountType              String             @default("individual") @map("account_type")
+  stripeAccountId          String?            @map("stripe_account_id")
+  stripeOnboardingComplete Boolean            @default(false) @map("stripe_onboarding_complete")
+  country                  String?
+  payoutCurrency           String             @default("USD") @map("payout_currency")
+  availabilityStatus       AvailabilityStatus @default(available) @map("availability_status")
+  vacationAutoReply        String?            @map("vacation_auto_reply")
+  vacationReturnDate       DateTime?          @map("vacation_return_date")
+  maxConcurrentOrders      Int                @default(10) @map("max_concurrent_orders")
+  sellerLevel              SellerLevel        @default(new) @map("seller_level")
+  profileCompletionScore   Int                @default(0) @map("profile_completion_score")
+  identityVerified         Boolean            @default(false) @map("identity_verified")
+  isActive                 Boolean            @default(true) @map("is_active")
+  isFeatured               Boolean            @default(false) @map("is_featured")
+  featuredScore            Float              @default(0) @map("featured_score")
+  avgRating                Float              @default(0) @map("avg_rating")
+  totalReviews             Int                @default(0) @map("total_reviews")
+  completedOrders          Int                @default(0) @map("completed_orders")
+  totalEarningsCents       BigInt             @default(0) @map("total_earnings_cents")
+  responseTimeHours        Int                @default(24) @map("response_time_hours")
+  createdAt                DateTime           @default(now()) @map("created_at")
+  updatedAt                DateTime           @updatedAt @map("updated_at")
+  ledger                   EarningsLedger[]
+  gigs                     Gig[]
+  portfolioItems           PortfolioItem[]
+  projects                 Project[]          @relation("ProjectSeller")
+  metrics                  SellerMetrics?
+  buyerRequests            SellerOffer[]
+  profile                  Profile            @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  taxInfo                  SellerTaxInfo?
+  skillEndorsements        SkillEndorsement[]
+
+  @@map("seller_profiles")
+}
+
+model Category {
+  id             String          @id @default(cuid())
+  name           String
+  slug           String          @unique
+  description    String?
+  icon           String?
+  parentId       String?         @map("parent_id")
+  sortOrder      Int             @default(0) @map("sort_order")
+  isActive       Boolean         @default(true) @map("is_active")
+  briefTemplates BriefTemplate[]
+  parent         Category?       @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children       Category[]      @relation("CategoryHierarchy")
+  gigs           Gig[]           @relation("GigCategory")
+  gigsAsSub      Gig[]           @relation("GigSubcategory")
+  jobPosts       JobPost[]
+  portfolioItems PortfolioItem[]
+  skills         Skill[]
+
+  @@map("categories")
+}
+
+model Skill {
+  id           String             @id @default(cuid())
+  name         String             @unique
+  slug         String             @unique
+  categoryId   String?            @map("category_id")
+  isActive     Boolean            @default(true) @map("is_active")
+  endorsements SkillEndorsement[]
+  category     Category?          @relation(fields: [categoryId], references: [id])
+
+  @@map("skills")
+}
+
+model SkillEndorsement {
+  id               String        @id @default(cuid())
+  sellerProfileId  String        @map("seller_profile_id")
+  skillId          String        @map("skill_id")
+  endorsedByUserId String        @map("endorsed_by_user_id")
+  orderId          String?       @map("order_id")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  sellerProfile    SellerProfile @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+  skill            Skill         @relation(fields: [skillId], references: [id])
+
+  @@unique([sellerProfileId, skillId, endorsedByUserId])
+  @@map("skill_endorsements")
+}
+
+model Gig {
+  id                String                @id @default(cuid())
+  sellerProfileId   String                @map("seller_profile_id")
+  categoryId        String                @map("category_id")
+  title             String
+  slug              String                @unique
+  shortDescription  String?               @map("short_description")
+  description       String
+  status            GigStatus             @default(draft)
+  tags              String[]              @default([])
+  faq               Json                  @default("[]")
+  avgRating         Float                 @default(0) @map("avg_rating")
+  reviewCount       Int                   @default(0) @map("review_count")
+  totalOrders       Int                   @default(0) @map("total_orders")
+  isFeatured        Boolean               @default(false) @map("is_featured")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  subcategoryId     String?               @map("subcategory_id")
+  analyticsDaily    GigAnalyticsDaily[]
+  analyticsRealtime GigAnalyticsRealtime?
+  images            GigImage[]
+  packages          GigPackage[]
+  promotions        GigPromotion[]
+  category          Category              @relation("GigCategory", fields: [categoryId], references: [id])
+  sellerProfile     SellerProfile         @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+  subcategory       Category?             @relation("GigSubcategory", fields: [subcategoryId], references: [id])
+  orders            Order[]               @relation("OrderGig")
+  savedBy           SavedGig[]
+  offers            SellerOffer[]         @relation("OfferGig")
+
+  @@map("gigs")
+}
+
+model GigPackage {
+  id           String  @id @default(cuid())
+  gigId        String  @map("gig_id")
+  name         String
+  description  String?
+  priceCents   Int     @map("price_cents")
+  deliveryDays Int     @map("delivery_days")
+  revisions    Int     @default(1)
+  features     Json    @default("[]")
+  isActive     Boolean @default(true) @map("is_active")
+  sortOrder    Int     @default(0) @map("sort_order")
+  gig          Gig     @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  orders       Order[] @relation("OrderPackage")
+
+  @@map("gig_packages")
+}
+
+model GigImage {
+  id          String  @id @default(cuid())
+  gigId       String  @map("gig_id")
+  storagePath String  @map("storage_path")
+  publicUrl   String  @map("public_url")
+  altText     String? @map("alt_text")
+  isCover     Boolean @default(false) @map("is_cover")
+  sortOrder   Int     @default(0) @map("sort_order")
+  gig         Gig     @relation(fields: [gigId], references: [id], onDelete: Cascade)
+
+  @@map("gig_images")
+}
+
+model PortfolioItem {
+  id              String        @id @default(cuid())
+  sellerProfileId String        @map("seller_profile_id")
+  title           String
+  description     String?
+  media           Json          @default("[]")
+  externalUrl     String?       @map("external_url")
+  categoryId      String?       @map("category_id")
+  skillIds        String[]      @default([]) @map("skill_ids")
+  orderIndex      Int           @default(0) @map("order_index")
+  isVisible       Boolean       @default(true) @map("is_visible")
+  viewCount       Int           @default(0) @map("view_count")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  category        Category?     @relation(fields: [categoryId], references: [id])
+  sellerProfile   SellerProfile @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_items")
+}
+
+model JobPost {
+  id              String           @id @default(cuid())
+  clientId        String           @map("client_id")
+  categoryId      String?          @map("category_id")
+  title           String
+  description     String
+  budgetType      JobBudgetType    @map("budget_type")
+  budgetMinCents  Int?             @map("budget_min_cents")
+  budgetMaxCents  Int?             @map("budget_max_cents")
+  duration        JobDuration?
+  experienceLevel ExperienceLevel? @map("experience_level")
+  requiredSkills  String[]         @default([]) @map("required_skills")
+  status          JobStatus        @default(open)
+  isPublic        Boolean          @default(true) @map("is_public")
+  orgId           String?          @map("org_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  expiresAt       DateTime?        @map("expires_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  category        Category?        @relation(fields: [categoryId], references: [id])
+  client          Profile          @relation(fields: [clientId], references: [userId])
+  org             Organization?    @relation(fields: [orgId], references: [id])
+  proposals       Proposal[]
+
+  @@map("job_posts")
+}
+
+model Proposal {
+  id             String         @id @default(cuid())
+  jobId          String         @map("job_id")
+  freelancerId   String         @map("freelancer_id")
+  coverLetter    String         @map("cover_letter")
+  bidAmountCents Int            @map("bid_amount_cents")
+  deliveryDays   Int            @map("delivery_days")
+  status         ProposalStatus @default(pending)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  order          Order?         @relation("OrderProposal")
+  freelancer     Profile        @relation("ProposalBuyer", fields: [freelancerId], references: [userId])
+  jobPost        JobPost        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("proposals")
+}
+
+model Order {
+  id                    String                 @id @default(cuid())
+  gigId                 String?                @map("gig_id")
+  packageId             String?                @map("package_id")
+  proposalId            String?                @unique @map("proposal_id")
+  projectMilestoneId    String?                @unique @map("project_milestone_id")
+  clientId              String                 @map("client_id")
+  freelancerId          String                 @map("freelancer_id")
+  title                 String
+  description           String?
+  requirements          String?
+  priceCents            Int                    @map("price_cents")
+  platformFeeCents      Int                    @map("platform_fee_cents")
+  freelancerPayoutCents Int                    @map("freelancer_payout_cents")
+  deliveryDays          Int                    @map("delivery_days")
+  revisionsAllowed      Int                    @default(1) @map("revisions_allowed")
+  revisionsUsed         Int                    @default(0) @map("revisions_used")
+  status                OrderStatus            @default(pending)
+  requiresContract      Boolean                @default(false) @map("requires_contract")
+  orgId                 String?                @map("org_id")
+  startedAt             DateTime?              @map("started_at")
+  deliveredAt           DateTime?              @map("delivered_at")
+  completedAt           DateTime?              @map("completed_at")
+  dueAt                 DateTime?              @map("due_at")
+  cancelledAt           DateTime?              @map("cancelled_at")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  approvalRequest       ApprovalRequest?       @relation("ApprovalOrder")
+  contractSignatures    ContractSignature[]
+  conversation          Conversation?
+  dispute               Dispute?
+  ledgerEntries         EarningsLedger[]
+  deliveries            OrderDelivery[]
+  revisionRequests      OrderRevisionRequest[]
+  client                Profile                @relation("OrderClient", fields: [clientId], references: [userId])
+  freelancer            Profile                @relation("OrderFreelancer", fields: [freelancerId], references: [userId])
+  gig                   Gig?                   @relation("OrderGig", fields: [gigId], references: [id])
+  org                   Organization?          @relation(fields: [orgId], references: [id])
+  package               GigPackage?            @relation("OrderPackage", fields: [packageId], references: [id])
+  projectMilestone      ProjectMilestone?      @relation(fields: [projectMilestoneId], references: [id])
+  proposal              Proposal?              @relation("OrderProposal", fields: [proposalId], references: [id])
+  payment               Payment?
+  review                Review?
+
+  @@map("orders")
+}
+
+model OrderDelivery {
+  id          String   @id @default(cuid())
+  orderId     String   @map("order_id")
+  message     String?
+  attachments Json     @default("[]")
+  createdAt   DateTime @default(now()) @map("created_at")
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_deliveries")
+}
+
+model OrderRevisionRequest {
+  id          String   @id @default(cuid())
+  orderId     String   @map("order_id")
+  clientId    String   @map("client_id")
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_revision_requests")
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  orderId               String        @unique @map("order_id")
+  clientId              String        @map("client_id")
+  freelancerId          String        @map("freelancer_id")
+  stripePaymentIntentId String?       @map("stripe_payment_intent_id")
+  stripeTransferId      String?       @map("stripe_transfer_id")
+  amountCents           Int           @map("amount_cents")
+  platformFeeCents      Int           @map("platform_fee_cents")
+  currency              String        @default("USD")
+  status                PaymentStatus @default(pending)
+  capturedAt            DateTime?     @map("captured_at")
+  transferredAt         DateTime?     @map("transferred_at")
+  refundedAt            DateTime?     @map("refunded_at")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  order                 Order         @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+model EarningsLedger {
+  id               String          @id @default(cuid())
+  sellerProfileId  String          @map("seller_profile_id")
+  orderId          String?         @map("order_id")
+  type             LedgerEntryType
+  grossAmountCents Int             @map("gross_amount_cents")
+  platformFeeCents Int             @default(0) @map("platform_fee_cents")
+  netAmountCents   Int             @map("net_amount_cents")
+  status           LedgerStatus    @default(pending)
+  clearedAt        DateTime?       @map("cleared_at")
+  description      String?
+  stripeTransferId String?         @map("stripe_transfer_id")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  order            Order?          @relation(fields: [orderId], references: [id])
+  sellerProfile    SellerProfile   @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("earnings_ledger")
+}
+
+model Conversation {
+  id            String                    @id @default(cuid())
+  orderId       String?                   @unique @map("order_id")
+  type          String                    @default("direct")
+  lastMessageAt DateTime?                 @map("last_message_at")
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  participants  ConversationParticipant[]
+  order         Order?                    @relation(fields: [orderId], references: [id])
+  messages      Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String       @map("conversation_id")
+  userId         String       @map("user_id")
+  lastReadAt     DateTime?    @map("last_read_at")
+  joinedAt       DateTime     @default(now()) @map("joined_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           Profile      @relation(fields: [userId], references: [userId])
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String       @map("conversation_id")
+  senderId       String       @map("sender_id")
+  content        String
+  attachments    Json         @default("[]")
+  type           String       @default("text")
+  isRead         Boolean      @default(false) @map("is_read")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         Profile      @relation(fields: [senderId], references: [userId])
+
+  @@map("messages")
+}
+
+model Review {
+  id                  String   @id @default(cuid())
+  orderId             String   @unique @map("order_id")
+  reviewerId          String   @map("reviewer_id")
+  revieweeId          String   @map("reviewee_id")
+  rating              Int
+  communicationRating Int      @map("communication_rating")
+  qualityRating       Int      @map("quality_rating")
+  deliveryRating      Int      @map("delivery_rating")
+  comment             String?
+  isVisible           Boolean  @default(false) @map("is_visible")
+  isHidden            Boolean  @default(false) @map("is_hidden")
+  hiddenReason        String?  @map("hidden_reason")
+  createdAt           DateTime @default(now()) @map("created_at")
+  order               Order    @relation(fields: [orderId], references: [id])
+  reviewee            Profile  @relation("ReviewReviewee", fields: [revieweeId], references: [userId])
+  reviewer            Profile  @relation("ReviewReviewer", fields: [reviewerId], references: [userId])
+
+  @@map("reviews")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  data      Json             @default("{}")
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+  user      Profile          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Dispute {
+  id           String        @id @default(cuid())
+  orderId      String        @unique @map("order_id")
+  openedById   String        @map("opened_by_id")
+  reason       String
+  description  String
+  status       DisputeStatus @default(open)
+  adminNotes   String?       @map("admin_notes")
+  resolvedById String?       @map("resolved_by_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  resolvedAt   DateTime?     @map("resolved_at")
+  order        Order         @relation(fields: [orderId], references: [id])
+
+  @@map("disputes")
+}
+
+model SavedGig {
+  userId    String   @map("user_id")
+  gigId     String   @map("gig_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  gig       Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  user      Profile  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([userId, gigId])
+  @@map("saved_gigs")
+}
+
+model TalentShortlist {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  name        String
+  isPreferred Boolean          @default(false) @map("is_preferred")
+  orderIndex  Int              @default(0) @map("order_index")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  entries     ShortlistEntry[]
+  user        Profile          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("talent_shortlists")
+}
+
+model ShortlistEntry {
+  id           String          @id @default(cuid())
+  shortlistId  String          @map("shortlist_id")
+  sellerUserId String          @map("seller_user_id")
+  note         String?
+  orderIndex   Int             @default(0) @map("order_index")
+  addedAt      DateTime        @default(now()) @map("added_at")
+  shortlist    TalentShortlist @relation(fields: [shortlistId], references: [id], onDelete: Cascade)
+
+  @@unique([shortlistId, sellerUserId])
+  @@map("shortlist_entries")
+}
+
+model SavedSearch {
+  id                    String    @id @default(cuid())
+  userId                String    @map("user_id")
+  name                  String
+  filters               Json
+  notificationFrequency String    @default("weekly") @map("notification_frequency")
+  lastCheckedAt         DateTime? @map("last_checked_at")
+  newSinceLastVisit     Int       @default(0) @map("new_since_last_visit")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  user                  Profile   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("saved_searches")
+}
+
+model BuyerBudgetSettings {
+  userId             String  @id @map("user_id")
+  monthlyBudgetCents Int?    @map("monthly_budget_cents")
+  alertAtPercentage  Int     @default(80) @map("alert_at_percentage")
+  currency           String  @default("USD")
+  user               Profile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("buyer_budget_settings")
+}
+
+model BriefTemplate {
+  id               String        @id @default(cuid())
+  userId           String        @map("user_id")
+  orgId            String?       @map("org_id")
+  name             String
+  categoryId       String?       @map("category_id")
+  titlePattern     String?       @map("title_pattern")
+  requirementsText String?       @map("requirements_text")
+  attachedFileUrls Json          @default("[]") @map("attached_file_urls")
+  tags             String[]      @default([])
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  category         Category?     @relation(fields: [categoryId], references: [id])
+  org              Organization? @relation(fields: [orgId], references: [id])
+  user             Profile       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("brief_templates")
+}
+
+model BuyerVerification {
+  userId                String    @id @map("user_id")
+  idVerified            Boolean   @default(false) @map("id_verified")
+  idVerifiedAt          DateTime? @map("id_verified_at")
+  businessVerified      Boolean   @default(false) @map("business_verified")
+  businessVerifiedAt    DateTime? @map("business_verified_at")
+  businessName          String?   @map("business_name")
+  taxIdEncrypted        String?   @map("tax_id_encrypted")
+  paymentMethodVerified Boolean   @default(false) @map("payment_method_verified")
+  documentUrls          Json      @default("[]") @map("document_urls")
+  reviewStatus          String?   @map("review_status")
+  reviewNotes           String?   @map("review_notes")
+  reviewedByAdminId     String?   @map("reviewed_by_admin_id")
+  user                  Profile   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("buyer_verifications")
+}
+
+model BuyerSpendMonthly {
+  id              String @id @default(cuid())
+  buyerUserId     String @map("buyer_user_id")
+  yearMonth       String @map("year_month")
+  totalSpentCents BigInt @default(0) @map("total_spent_cents")
+  orderCount      Int    @default(0) @map("order_count")
+  byCategory      Json   @default("{}") @map("by_category")
+  bySeller        Json   @default("{}") @map("by_seller")
+
+  @@unique([buyerUserId, yearMonth])
+  @@map("buyer_spend_monthly")
+}
+
+model BuyerRequest {
+  id             String        @id @default(cuid())
+  buyerUserId    String        @map("buyer_user_id")
+  title          String
+  description    String
+  categoryId     String?       @map("category_id")
+  budgetMinCents Int?          @map("budget_min_cents")
+  budgetMaxCents Int?          @map("budget_max_cents")
+  deliveryDays   Int?          @map("delivery_days")
+  skillsNeeded   String[]      @default([]) @map("skills_needed")
+  status         String        @default("open")
+  expiresAt      DateTime      @default(dbgenerated("(now() + '7 days'::interval)")) @map("expires_at")
+  offersCount    Int           @default(0) @map("offers_count")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  offers         SellerOffer[]
+
+  @@map("buyer_requests")
+}
+
+model SellerOffer {
+  id              String        @id @default(cuid())
+  sellerProfileId String        @map("seller_profile_id")
+  buyerRequestId  String?       @map("buyer_request_id")
+  buyerUserId     String        @map("buyer_user_id")
+  coverLetter     String?       @map("cover_letter")
+  priceCents      Int           @map("price_cents")
+  deliveryDays    Int           @map("delivery_days")
+  revisions       Int           @default(1)
+  inclusions      Json          @default("[]")
+  attachedGigId   String?       @map("attached_gig_id")
+  status          OfferStatus   @default(pending)
+  expiresAt       DateTime?     @map("expires_at")
+  orderId         String?       @map("order_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  attachedGig     Gig?          @relation("OfferGig", fields: [attachedGigId], references: [id])
+  buyerRequest    BuyerRequest? @relation(fields: [buyerRequestId], references: [id])
+  sellerProfile   SellerProfile @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("seller_offers")
+}
+
+model GigPromotion {
+  id                    String   @id @default(cuid())
+  gigId                 String   @map("gig_id")
+  promotionType         String   @map("promotion_type")
+  startDate             DateTime @map("start_date")
+  endDate               DateTime @map("end_date")
+  dailyBudgetCents      Int      @map("daily_budget_cents")
+  totalSpentCents       Int      @default(0) @map("total_spent_cents")
+  stripePaymentIntentId String?  @map("stripe_payment_intent_id")
+  autoRenew             Boolean  @default(false) @map("auto_renew")
+  status                String   @default("active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  gig                   Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+
+  @@map("gig_promotions")
+}
+
+model Coupon {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  discountPercent Int       @map("discount_percent")
+  maxUses         Int?      @map("max_uses")
+  usedCount       Int       @default(0) @map("used_count")
+  isActive        Boolean   @default(true) @map("is_active")
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("coupons")
+}
+
+model GigAnalyticsDaily {
+  id             String   @id @default(cuid())
+  gigId          String   @map("gig_id")
+  date           DateTime @db.Date
+  impressions    Int      @default(0)
+  clicks         Int      @default(0)
+  pageViews      Int      @default(0) @map("page_views")
+  ordersPlaced   Int      @default(0) @map("orders_placed")
+  trafficSources Json     @default("{}") @map("traffic_sources")
+  gig            Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+
+  @@unique([gigId, date])
+  @@map("gig_analytics_daily")
+}
+
+model GigAnalyticsRealtime {
+  gigId        String   @id @map("gig_id")
+  date         DateTime @default(now()) @db.Date
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  pageViews    Int      @default(0) @map("page_views")
+  ordersPlaced Int      @default(0) @map("orders_placed")
+  gig          Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+
+  @@map("gig_analytics_realtime")
+}
+
+model SellerMetrics {
+  sellerProfileId        String        @id @map("seller_profile_id")
+  completionRate         Float?        @map("completion_rate")
+  cancellationRate       Float?        @map("cancellation_rate")
+  responseRate           Float?        @map("response_rate")
+  avgResponseTimeMinutes Int?          @map("avg_response_time_minutes")
+  onTimeDeliveryRate     Float?        @map("on_time_delivery_rate")
+  averageRating          Float?        @map("average_rating")
+  totalReviews           Int           @default(0) @map("total_reviews")
+  lastComputedAt         DateTime      @default(now()) @map("last_computed_at")
+  sellerProfile          SellerProfile @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("seller_metrics")
+}
+
+model SellerTaxInfo {
+  sellerProfileId   String        @id @map("seller_profile_id")
+  formType          String        @map("form_type")
+  legalName         String?       @map("legal_name")
+  taxIdEncrypted    String?       @map("tax_id_encrypted")
+  address           Json?
+  taxClassification String?       @map("tax_classification")
+  foreignTaxStatus  String?       @map("foreign_tax_status")
+  formSubmittedAt   DateTime?     @map("form_submitted_at")
+  formYear          Int?          @map("form_year")
+  isVerified        Boolean       @default(false) @map("is_verified")
+  sellerProfile     SellerProfile @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("seller_tax_info")
+}
+
+model Project {
+  id                    String             @id @default(cuid())
+  buyerUserId           String             @map("buyer_user_id")
+  sellerProfileId       String             @map("seller_profile_id")
+  title                 String
+  description           String?
+  totalBudgetCents      Int                @map("total_budget_cents")
+  deadline              DateTime?
+  status                ProjectStatus      @default(draft)
+  stripePaymentIntentId String?            @map("stripe_payment_intent_id")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+  comments              ProjectComment[]
+  milestones            ProjectMilestone[]
+  buyer                 Profile            @relation("ProjectBuyer", fields: [buyerUserId], references: [userId])
+  seller                SellerProfile      @relation("ProjectSeller", fields: [sellerProfileId], references: [id])
+
+  @@map("projects")
+}
+
+model ProjectMilestone {
+  id              String          @id @default(cuid())
+  projectId       String          @map("project_id")
+  title           String
+  description     String?
+  amountCents     Int             @map("amount_cents")
+  dueDate         DateTime?       @map("due_date")
+  orderIndex      Int             @default(0) @map("order_index")
+  status          MilestoneStatus @default(pending)
+  deliverables    Json            @default("[]")
+  submissionNotes String?         @map("submission_notes")
+  revisionNotes   String?         @map("revision_notes")
+  submittedAt     DateTime?       @map("submitted_at")
+  approvedAt      DateTime?       @map("approved_at")
+  order           Order?
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_milestones")
+}
+
+model ProjectComment {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  milestoneId String?  @map("milestone_id")
+  userId      String   @map("user_id")
+  content     String
+  isInternal  Boolean  @default(true) @map("is_internal")
+  createdAt   DateTime @default(now()) @map("created_at")
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_comments")
+}
+
+model Organization {
+  id                        String             @id @default(cuid())
+  slug                      String             @unique
+  name                      String
+  logoUrl                   String?            @map("logo_url")
+  industry                  String?
+  companySize               String?            @map("company_size")
+  billingEmail              String             @map("billing_email")
+  plan                      OrgPlan            @default(free)
+  planStartedAt             DateTime?          @map("plan_started_at")
+  planEndsAt                DateTime?          @map("plan_ends_at")
+  stripeCustomerId          String?            @map("stripe_customer_id")
+  stripeSubscriptionId      String?            @map("stripe_subscription_id")
+  ownerId                   String             @map("owner_id")
+  dedicatedAccountManagerId String?            @map("dedicated_account_manager_id")
+  isActive                  Boolean            @default(true) @map("is_active")
+  createdAt                 DateTime           @default(now()) @map("created_at")
+  updatedAt                 DateTime           @updatedAt @map("updated_at")
+  apiKeys                   ApiKey[]
+  approvalRequests          ApprovalRequest[]
+  approvalRules             ApprovalRule[]
+  auditLogs                 AuditLog[]
+  briefTemplates            BriefTemplate[]
+  contractTemplates         ContractTemplate[]
+  customDomains             CustomDomain[]
+  jobPosts                  JobPost[]
+  orders                    Order[]
+  branding                  OrgBranding?
+  invitations               OrgInvitation[]
+  members                   OrgMember[]
+  ssoConfig                 OrgSsoConfig?
+  owner                     Profile            @relation("OrgOwner", fields: [ownerId], references: [userId])
+  webhooks                  Webhook[]
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  id                     String        @id @default(cuid())
+  orgId                  String        @map("org_id")
+  userId                 String        @map("user_id")
+  role                   OrgMemberRole @default(member)
+  department             String?
+  monthlySpendLimitCents Int?          @map("monthly_spend_limit_cents")
+  isActive               Boolean       @default(true) @map("is_active")
+  invitedAt              DateTime?     @map("invited_at")
+  joinedAt               DateTime?     @map("joined_at")
+  invitedByUserId        String?       @map("invited_by_user_id")
+  org                    Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user                   Profile       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@map("org_members")
+}
+
+model OrgInvitation {
+  id              String        @id @default(cuid())
+  orgId           String        @map("org_id")
+  email           String
+  role            OrgMemberRole @default(member)
+  token           String        @unique
+  expiresAt       DateTime      @map("expires_at")
+  acceptedAt      DateTime?     @map("accepted_at")
+  invitedByUserId String        @map("invited_by_user_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  org             Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("org_invitations")
+}
+
+model OrgBranding {
+  orgId               String       @id @map("org_id")
+  primaryColor        String?      @map("primary_color")
+  secondaryColor      String?      @map("secondary_color")
+  accentColor         String?      @map("accent_color")
+  logoUrl             String?      @map("logo_url")
+  faviconUrl          String?      @map("favicon_url")
+  customEmailFromName String?      @map("custom_email_from_name")
+  customEmailDomain   String?      @map("custom_email_domain")
+  removePoweredBy     Boolean      @default(false) @map("remove_powered_by")
+  welcomeMessage      String?      @map("welcome_message")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  org                 Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("org_branding")
+}
+
+model CustomDomain {
+  id                String       @id @default(cuid())
+  orgId             String       @map("org_id")
+  domain            String       @unique
+  verified          Boolean      @default(false)
+  sslProvisioned    Boolean      @default(false) @map("ssl_provisioned")
+  verificationToken String       @map("verification_token")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("custom_domains")
+}
+
+model OrgSsoConfig {
+  orgId                 String        @id @map("org_id")
+  providerType          String        @map("provider_type")
+  idpEntityId           String?       @map("idp_entity_id")
+  ssoUrl                String?       @map("sso_url")
+  x509Cert              String?       @map("x509_cert")
+  oidcDiscoveryUrl      String?       @map("oidc_discovery_url")
+  clientId              String?       @map("client_id")
+  clientSecretEncrypted String?       @map("client_secret_encrypted")
+  jitProvisioning       Boolean       @default(false) @map("jit_provisioning")
+  enforceSso            Boolean       @default(false) @map("enforce_sso")
+  defaultRole           OrgMemberRole @default(member) @map("default_role")
+  scimApiTokenEncrypted String?       @map("scim_api_token_encrypted")
+  isActive              Boolean       @default(false) @map("is_active")
+  configuredAt          DateTime?     @map("configured_at")
+  configuredByUserId    String?       @map("configured_by_user_id")
+  org                   Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("org_sso_configs")
+}
+
+model ApiKey {
+  id              String       @id @default(cuid())
+  orgId           String       @map("org_id")
+  name            String
+  keyHash         String       @map("key_hash")
+  keyPrefix       String       @map("key_prefix")
+  scopes          String[]     @default([])
+  expiresAt       DateTime?    @map("expires_at")
+  lastUsedAt      DateTime?    @map("last_used_at")
+  lastUsedIp      String?      @map("last_used_ip")
+  isActive        Boolean      @default(true) @map("is_active")
+  createdByUserId String       @map("created_by_user_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  createdBy       Profile      @relation("ApiKeyCreator", fields: [createdByUserId], references: [userId])
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+model Webhook {
+  id              String            @id @default(cuid())
+  orgId           String            @map("org_id")
+  url             String
+  events          String[]          @default([])
+  secretHash      String            @map("secret_hash")
+  isActive        Boolean           @default(true) @map("is_active")
+  lastTriggeredAt DateTime?         @map("last_triggered_at")
+  failureCount    Int               @default(0) @map("failure_count")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  deliveries      WebhookDelivery[]
+  org             Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id            String   @id @default(cuid())
+  webhookId     String   @map("webhook_id")
+  eventType     String   @map("event_type")
+  payload       Json
+  httpStatus    Int?     @map("http_status")
+  responseBody  String?  @map("response_body")
+  durationMs    Int?     @map("duration_ms")
+  attemptNumber Int      @default(1) @map("attempt_number")
+  deliveredAt   DateTime @default(now()) @map("delivered_at")
+  webhook       Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@map("webhook_deliveries")
+}
+
+model ApprovalRule {
+  id                   String            @id @default(cuid())
+  orgId                String            @map("org_id")
+  name                 String
+  triggerCondition     Json              @map("trigger_condition")
+  requiredApproverRole OrgMemberRole     @default(admin) @map("required_approver_role")
+  isActive             Boolean           @default(true) @map("is_active")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  requests             ApprovalRequest[]
+  org                  Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("approval_rules")
+}
+
+model ApprovalRequest {
+  id              String         @id @default(cuid())
+  orgId           String         @map("org_id")
+  ruleId          String?        @map("rule_id")
+  requesterUserId String         @map("requester_user_id")
+  approverUserId  String?        @map("approver_user_id")
+  resourceType    String         @map("resource_type")
+  resourceId      String         @map("resource_id")
+  orderId         String?        @unique @map("order_id")
+  description     String?
+  amountCents     Int?           @map("amount_cents")
+  status          ApprovalStatus @default(pending)
+  decisionReason  String?        @map("decision_reason")
+  decidedAt       DateTime?      @map("decided_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  approver        Profile?       @relation("ApprovalApprover", fields: [approverUserId], references: [userId])
+  order           Order?         @relation("ApprovalOrder", fields: [orderId], references: [id])
+  org             Organization   @relation(fields: [orgId], references: [id])
+  requester       Profile        @relation("ApprovalRequester", fields: [requesterUserId], references: [userId])
+  rule            ApprovalRule?  @relation(fields: [ruleId], references: [id])
+
+  @@map("approval_requests")
+}
+
+model ContractTemplate {
+  id              String              @id @default(cuid())
+  orgId           String              @map("org_id")
+  name            String
+  fileUrl         String              @map("file_url")
+  fileType        String              @map("file_type")
+  variables       Json                @default("[]")
+  assignmentRule  Json                @default("{}") @map("assignment_rule")
+  version         Int                 @default(1)
+  isActive        Boolean             @default(true) @map("is_active")
+  createdByUserId String?             @map("created_by_user_id")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  signatures      ContractSignature[]
+  org             Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("contract_templates")
+}
+
+model ContractSignature {
+  id                 String           @id @default(cuid())
+  contractTemplateId String           @map("contract_template_id")
+  orderId            String           @map("order_id")
+  signerUserId       String           @map("signer_user_id")
+  signedDocumentUrl  String           @map("signed_document_url")
+  documentHash       String           @map("document_hash")
+  ipAddress          String?          @map("ip_address")
+  userAgent          String?          @map("user_agent")
+  signedAt           DateTime         @default(now()) @map("signed_at")
+  contractTemplate   ContractTemplate @relation(fields: [contractTemplateId], references: [id])
+  order              Order            @relation(fields: [orderId], references: [id])
+
+  @@map("contract_signatures")
+}
+
+model AuditLog {
+  id           String        @id @default(cuid())
+  orgId        String?       @map("org_id")
+  actorUserId  String?       @map("actor_user_id")
+  action       String
+  resourceType String?       @map("resource_type")
+  resourceId   String?       @map("resource_id")
+  oldValue     Json?         @map("old_value")
+  newValue     Json?         @map("new_value")
+  ipAddress    String?       @map("ip_address")
+  userAgent    String?       @map("user_agent")
+  metadata     Json          @default("{}")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  actor        Profile?      @relation("AuditLogActor", fields: [actorUserId], references: [userId])
+  org          Organization? @relation(fields: [orgId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model DataDeletionRequest {
+  id                  String    @id @default(cuid())
+  userId              String    @map("user_id")
+  status              String    @default("pending")
+  reason              String?
+  gracePeriodEndsAt   DateTime  @map("grace_period_ends_at")
+  processingStartedAt DateTime? @map("processing_started_at")
+  completedAt         DateTime? @map("completed_at")
+  cancelledAt         DateTime? @map("cancelled_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  user                Profile   @relation(fields: [userId], references: [userId])
+
+  @@map("data_deletion_requests")
+}
+
+model UserPermissionOverride {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  permission  String
+  granted     Boolean
+  grantedById String?  @map("granted_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, permission])
+  @@map("user_permission_overrides")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  label       String
+  description String   @default("")
+  isBuiltIn   Boolean  @default(false) @map("is_built_in")
+  permissions String[] @default([])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById String?  @map("updated_by_id")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  description String   @default("")
+  resource    String
+  action      String
+  isBuiltIn   Boolean  @default(true) @map("is_built_in")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("permissions")
+}
+
+model PermissionResource {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  label     String
+  isBuiltIn Boolean  @default(false) @map("is_built_in")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("permission_resources")
+}
+
+model PermissionAction {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  label     String
+  isBuiltIn Boolean  @default(false) @map("is_built_in")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("permission_actions")
+}
+
+enum SellerLevel {
+  new
+  level_1
+  level_2
+  top_rated
+}
+
+enum AvailabilityStatus {
+  available
+  busy
+  on_vacation
+}
+
+enum GigStatus {
+  draft
+  active
+  paused
+  suspended
+}
+
+enum OrderStatus {
+  pending
+  active
+  in_revision
+  delivered
+  completed
+  cancelled
+  disputed
+}
+
+enum ProposalStatus {
+  pending
+  shortlisted
+  accepted
+  rejected
+  withdrawn
+}
+
+enum JobStatus {
+  open
+  in_progress
+  closed
+  cancelled
+}
+
+enum JobBudgetType {
+  fixed
+  hourly
+}
+
+enum JobDuration {
+  less_than_month
+  one_to_three_months
+  three_to_six_months
+  ongoing
+}
+
+enum ExperienceLevel {
+  entry
+  intermediate
+  expert
+}
+
+enum DisputeStatus {
+  open
+  under_review
+  resolved_client
+  resolved_freelancer
+  escalated
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  refunded
+  disputed
+}
+
+enum NotificationType {
+  order_update
+  new_message
+  new_proposal
+  payment
+  review
+  system
+  approval_request
+  dispute
+  saved_search_match
+}
+
+enum OfferStatus {
+  pending
+  accepted
+  declined
+  expired
+  cancelled
+}
+
+enum ProjectStatus {
+  draft
+  pending_seller
+  active
+  completed
+  disputed
+  cancelled
+}
+
+enum MilestoneStatus {
+  pending
+  in_progress
+  submitted
+  revision_requested
+  approved
+  paid
+  disputed
+}
+
+enum OrgMemberRole {
+  owner
+  admin
+  member
+  billing_manager
+  viewer
+}
+
+enum OrgPlan {
+  free
+  pro
+  business
+  enterprise
+}
+
+enum LedgerEntryType {
+  order_credit
+  withdrawal
+  promotion_debit
+  refund
+  adjustment
+}
+
+enum LedgerStatus {
+  pending
+  cleared
+  processing
+  failed
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
