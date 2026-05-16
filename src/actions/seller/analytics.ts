@@ -3,28 +3,8 @@
 import { requireAuth } from "@/lib/server/auth"
 import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
+import type { AnalyticsData } from "@/types/seller"
 
-export interface AnalyticsStats {
-  totalImpressions: number
-  totalClicks:      number
-  ctrPercent:       number
-  conversionPercent: number
-}
-
-export interface GigAnalyticsRow {
-  gigId:        string
-  title:        string
-  impressions:  number
-  clicks:       number
-  ctrPercent:   number
-  orders:       number
-  revenueCents: number
-}
-
-export interface AnalyticsData {
-  stats:         AnalyticsStats
-  gigBreakdown:  GigAnalyticsRow[]
-}
 
 const MOCK_BY_RANGE: Record<string, AnalyticsData> = {
   "7": {

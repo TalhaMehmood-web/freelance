@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,8 +12,8 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { updateProfile } from "@/actions/seller/settings"
-import type { SellerSettingsData } from "@/actions/seller/settings"
+import { apiClient } from "@/lib/client/axios"
+import type { SellerSettingsData } from "@/types/seller"
 
 const Schema = z.object({
   displayName:         z.string().min(2, "Min 2 characters").max(60),
@@ -44,7 +45,6 @@ const CURRENCIES = [
 export function ProfileTab({ defaults }: { defaults: SellerSettingsData }) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [saved, setSaved]             = useState(false)
-  const [isPending, startTransition]  = useTransition()
 
   const form = useForm<FormData>({
     resolver: zodResolver(Schema) as any,
@@ -58,14 +58,16 @@ export function ProfileTab({ defaults }: { defaults: SellerSettingsData }) {
     },
   })
 
-  function onSubmit(data: any) {
+  const saveMutation = useMutation({
+    mutationFn: (data: FormData) => apiClient.patch("/api/seller/settings/profile", data),
+    onSuccess: () => setSaved(true),
+    onError:   () => setServerError("Failed to save."),
+  })
+
+  function onSubmit(data: FormData) {
     setServerError(null)
     setSaved(false)
-    startTransition(async () => {
-      const result = await updateProfile(data)
-      if (!result.success) { setServerError(result.error ?? "Failed to save."); return }
-      setSaved(true)
-    })
+    saveMutation.mutate(data)
   }
 
   return (
@@ -131,7 +133,7 @@ export function ProfileTab({ defaults }: { defaults: SellerSettingsData }) {
       {serverError && <p className="text-sm text-danger-600 bg-danger-50 border border-danger-100 rounded-xl px-3 py-2">{serverError}</p>}
       {saved && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2">Profile saved successfully.</p>}
 
-      <Button type="submit" disabled={isPending}>{isPending ? "Saving…" : "Save Changes"}</Button>
+      <Button type="submit" disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving…" : "Save Changes"}</Button>
     </form>
   )
 }

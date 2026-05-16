@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import axios from "axios"
+import { apiClient as axios } from "@/lib/client/axios"
 
 export interface AdminGigRow {
   id:                 string

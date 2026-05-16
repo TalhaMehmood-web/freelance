@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { Shield, AlertTriangle, Lock } from "lucide-react"
+import { useMutation } from "@tanstack/react-query"
 import {
   Dialog,
   DialogContent,
@@ -12,17 +13,17 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/shared/utils"
-import { assignRole, revokeRole } from "@/actions/admin/users"
+import { apiClient } from "@/lib/client/axios"
 import { UserRole } from "@/lib/shared/constants"
 import type { AdminUserRow, RoleRow } from "@/types/admin"
 
 interface UserRoleModalProps {
-  user:         AdminUserRow | null
-  open:         boolean
-  onClose:      () => void
-  onSaved:      (userId: string, roles: string[]) => void
+  user:           AdminUserRow | null
+  open:           boolean
+  onClose:        () => void
+  onSaved:        (userId: string, roles: string[]) => void
   availableRoles: RoleRow[]
-  isSuperAdmin: boolean
+  isSuperAdmin:   boolean
 }
 
 const BUILT_IN_COLOR: Record<string, string> = {
@@ -34,41 +35,65 @@ const BUILT_IN_COLOR: Record<string, string> = {
 export function UserRoleModal({
   user, open, onClose, onSaved, availableRoles, isSuperAdmin,
 }: UserRoleModalProps) {
-  const [localRoles, setLocalRoles]  = useState<string[]>(user?.roles ?? [])
-  const [error, setError]            = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [localRoles, setLocalRoles] = useState<string[]>(user?.roles ?? [])
+  const [error, setError]           = useState<string | null>(null)
+  const [pendingSlug, setPendingSlug] = useState<string | null>(null)
 
-  // Sync when user changes
-  if (user && user.roles.join() !== localRoles.join() && !isPending) {
+  if (user && user.roles.join() !== localRoles.join() && !pendingSlug) {
     setLocalRoles(user.roles)
   }
+
+  const assignMutation = useMutation({
+    mutationFn: ({ userId, roleSlug }: { userId: string; roleSlug: string }) =>
+      apiClient.post(`/api/admin/users/${userId}/roles`, { roleSlug }),
+    onSuccess: (_, { roleSlug }) => {
+      const next = [...localRoles, roleSlug]
+      setLocalRoles(next)
+      onSaved(user!.userId, next)
+      setPendingSlug(null)
+    },
+    onError: () => {
+      setError("Failed to assign role.")
+      setPendingSlug(null)
+    },
+  })
+
+  const revokeMutation = useMutation({
+    mutationFn: ({ userId, roleSlug }: { userId: string; roleSlug: string }) =>
+      apiClient.delete(`/api/admin/users/${userId}/roles/${roleSlug}`),
+    onSuccess: (_, { roleSlug }) => {
+      const next = localRoles.filter(r => r !== roleSlug)
+      setLocalRoles(next)
+      onSaved(user!.userId, next)
+      setPendingSlug(null)
+    },
+    onError: () => {
+      setError("Failed to revoke role.")
+      setPendingSlug(null)
+    },
+  })
 
   function handleToggle(slug: string) {
     if (!user || !isSuperAdmin) return
     setError(null)
     const has = localRoles.includes(slug)
 
+    if (has && slug === UserRole.Buyer) {
+      setError("Cannot revoke the buyer role.")
+      return
+    }
+
+    setPendingSlug(slug)
     if (!has) {
-      startTransition(async () => {
-        const result = await assignRole(user.userId, slug)
-        if (!result.success) { setError(result.error ?? "Failed to assign role."); return }
-        const next = [...localRoles, slug]
-        setLocalRoles(next)
-        onSaved(user.userId, next)
-      })
+      assignMutation.mutate({ userId: user.userId, roleSlug: slug })
     } else {
-      if (slug === UserRole.Buyer) { setError("Cannot revoke the buyer role."); return }
-      startTransition(async () => {
-        const result = await revokeRole(user.userId, slug)
-        if (!result.success) { setError(result.error ?? "Failed to revoke role."); return }
-        const next = localRoles.filter(r => r !== slug)
-        setLocalRoles(next)
-        onSaved(user.userId, next)
-      })
+      revokeMutation.mutate({ userId: user.userId, roleSlug: slug })
     }
   }
 
   if (!user) return null
+
+  const isPending = assignMutation.isPending || revokeMutation.isPending
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>

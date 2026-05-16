@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Check, X, Clock, RefreshCw, Sparkles, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn, formatCurrency, pluralize } from "@/lib/shared/utils"
+import { OrderModal } from "./OrderModal"
+import { AuthButton } from "@/components/auth/AuthButton"
 import type { GigPackage } from "@/types/gigs"
 
 const PKG_COLORS: Record<string, { tab: string; card: string; price: string }> = {
@@ -16,8 +18,15 @@ function formatRevisions(n: number) {
   return n >= 99 ? "Unlimited" : `${n} ${pluralize(n, "revision")}`
 }
 
-export function GigPackageSelector({ packages }: { packages: GigPackage[] }) {
+interface GigPackageSelectorProps {
+  packages: GigPackage[]
+  gigId:    string
+  gigTitle: string
+}
+
+export function GigPackageSelector({ packages, gigId, gigTitle }: GigPackageSelectorProps) {
   const [selectedId, setSelectedId] = useState(packages[0]?.id ?? "")
+  const [modalOpen, setModalOpen]   = useState(false)
   if (packages.length === 0) return null
 
   const allFeatures = [...new Set(packages.flatMap((p) => p.features))]
@@ -102,13 +111,23 @@ export function GigPackageSelector({ packages }: { packages: GigPackage[] }) {
             </ul>
           )}
 
-          <Button className="w-full gap-2" size="sm" disabled>
-            <ShoppingCart className="h-3.5 w-3.5" />
-            Continue — {formatCurrency(selectedPkg.priceCents)}
-          </Button>
+          <AuthButton>
+            <Button className="w-full gap-2" size="sm" onClick={() => setModalOpen(true)}>
+              <ShoppingCart className="h-3.5 w-3.5" />
+              Continue — {formatCurrency(selectedPkg.priceCents)}
+            </Button>
+          </AuthButton>
           <p className="text-2xs text-text-tertiary text-center mt-1.5">
             {formatRevisions(selectedPkg.revisions)} · {selectedPkg.deliveryDays}-day delivery
           </p>
+
+          <OrderModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            pkg={selectedPkg}
+            gigId={gigId}
+            gigTitle={gigTitle}
+          />
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/client/axios"
 import type { GigsQueryParams, GigsApiResponse } from "../types"
 
 async function fetchGigs(params: GigsQueryParams): Promise<GigsApiResponse> {
@@ -11,9 +12,8 @@ async function fetchGigs(params: GigsQueryParams): Promise<GigsApiResponse> {
     page:    String(params.page),
     perPage: String(params.perPage),
   })
-  const res = await fetch(`/api/seller/gigs?${sp.toString()}`)
-  if (!res.ok) throw new Error("Failed to fetch gigs")
-  return res.json()
+  const res = await apiClient.get<GigsApiResponse>(`/api/seller/gigs?${sp.toString()}`)
+  return res.data
 }
 
 export function useGigsQuery(params: GigsQueryParams) {

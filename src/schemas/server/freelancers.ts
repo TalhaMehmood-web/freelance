@@ -16,5 +16,5 @@ export type FreelancerFilters = z.infer<typeof FreelancerSearchParamsSchema>
 export const UsernameSchema = z
   .string()
   .min(1)
-  .max(50)
-  .regex(/^[a-z0-9_]+$/)
+  .max(80)
+  .regex(/^[a-z0-9_-]+$/)

@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/server/auth"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireApiAuth } from "@/lib/server/apiAuth"
+import { requireSuperAdmin } from "@/lib/server/permissions"
 import { UserRole } from "@/lib/shared/constants"
 import { prisma } from "@/lib/server/prisma"
+import { z } from "zod"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = prisma as any
@@ -9,12 +11,16 @@ const db = prisma as any
 const VALID_SORT = ["label", "slug", "updatedAt", "createdAt"] as const
 type SortCol = typeof VALID_SORT[number]
 
+const RoleSchema = z.object({
+  label:       z.string().min(1).max(60).trim(),
+  slug:        z.string().min(1).max(60).trim().regex(/^[a-z0-9_]+$/, "Slug must be lowercase letters, numbers, underscores only"),
+  description: z.string().max(300).trim().optional().default(""),
+  permissions: z.array(z.string()).default([]),
+})
+
 export async function GET(req: NextRequest) {
-  try {
-    await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
 
   const { searchParams } = new URL(req.url)
   const search  = searchParams.get("search")?.trim() ?? ""
@@ -61,4 +67,35 @@ export async function GET(req: NextRequest) {
     page,
     perPage,
   })
+}
+
+// POST /api/admin/roles — create role
+export async function POST(req: NextRequest) {
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
+  const { session } = auth
+
+  try { await requireSuperAdmin(session) }
+  catch { return NextResponse.json({ error: "Super admin required." }, { status: 403 }) }
+
+  const parsed = RoleSchema.safeParse(await req.json())
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+
+  const { label, slug, description, permissions } = parsed.data
+
+  const existing = await prisma.role.findUnique({ where: { slug } })
+  if (existing) return NextResponse.json({ error: `A role with slug "${slug}" already exists.` }, { status: 400 })
+
+  const role = await prisma.role.create({
+    data: { slug, label, description, permissions, isBuiltIn: false, updatedById: session.userId },
+  })
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      id: role.id, slug: role.slug, label: role.label, description: role.description,
+      isBuiltIn: role.isBuiltIn, permissions: role.permissions,
+      updatedAt: role.updatedAt.toISOString(), updatedById: role.updatedById,
+    },
+  }, { status: 201 })
 }

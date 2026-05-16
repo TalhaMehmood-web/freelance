@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
+import { apiClient as axios } from "@/lib/client/axios"
 import { toast } from "sonner"
 import { KeyRound } from "lucide-react"
 import {

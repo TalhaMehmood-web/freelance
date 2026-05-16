@@ -2,9 +2,7 @@
 
 import { cache } from "react"
 import { prisma } from "@/lib/server/prisma"
-import type { Category } from "@prisma/client"
-
-export type CategoryWithChildren = Category & { children: Category[] }
+import type { CategoryWithChildren } from "@/types/categories"
 
 export const getCategories = cache(async (): Promise<CategoryWithChildren[]> => {
   const cats = await prisma.category.findMany({

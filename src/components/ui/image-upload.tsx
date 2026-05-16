@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef } from "react"
-import axios from "axios"
+import { apiClient } from "@/lib/client/axios"
 import { useMutation } from "@tanstack/react-query"
 import { ImagePlus, X, Loader2, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -40,7 +40,7 @@ export function ImageUpload({
       const form = new FormData()
       form.append("file",   file)
       form.append("folder", folder)
-      const { data } = await axios.post<{ url: string; path: string }>("/api/upload", form)
+      const { data } = await apiClient.post<{ url: string; path: string }>("/api/upload", form)
       return data
     },
     onSuccess: (data) => onChange({ url: data.url, path: data.path }),
@@ -48,7 +48,7 @@ export function ImageUpload({
 
   const removeMutation = useMutation({
     mutationFn: async (path: string) => {
-      await axios.delete("/api/upload", { data: { path } })
+      await apiClient.delete("/api/upload", { data: { path } })
     },
     onSuccess: () => {
       onChange(null)

@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/client/axios"
 import type { Category } from "@prisma/client"
 
 export interface CategoryDetailResponse {
@@ -35,9 +36,8 @@ export function useCategoryDetailQuery(categoryId: string, params: CategoryDetai
       if (sortDir) sp.set("sortDir", sortDir)
       sp.set("page",    String(page))
       sp.set("perPage", String(perPage))
-      const res = await fetch(`/api/admin/categories/${categoryId}?${sp.toString()}`)
-      if (!res.ok) throw new Error("Failed to fetch category")
-      return res.json() as Promise<CategoryDetailResponse>
+      const res = await apiClient.get<CategoryDetailResponse>(`/api/admin/categories/${categoryId}?${sp.toString()}`)
+      return res.data
     },
     staleTime: 30_000,
     enabled:  !!categoryId,

@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RoleToggle } from "@/components/shared/RoleToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,15 +21,15 @@ import type { Session } from "@/types/shared";
 interface AppHeaderProps {
   variant: "marketing" | "dashboard";
   session?: Session | null;
-  hideDefaultBell?: boolean;
   hideRoleToggle?: boolean;
+  notificationBell?: ReactNode;
 }
 
 export async function AppHeader({
   variant,
   session,
-  hideDefaultBell = false,
   hideRoleToggle = false,
+  notificationBell,
 }: AppHeaderProps) {
   const isDashboard = variant === "dashboard";
 
@@ -106,15 +107,7 @@ export async function AppHeader({
             )}
 
             {/* Notifications */}
-            {!hideDefaultBell && (
-              <Link
-                href={`/${session.activeRole}/notifications`}
-                className="relative p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-muted transition-colors"
-                aria-label="Notifications"
-              >
-                <Bell className="h-5 w-5" />
-              </Link>
-            )}
+            {notificationBell ?? null}
 
             {/* User menu */}
             <DropdownMenu>

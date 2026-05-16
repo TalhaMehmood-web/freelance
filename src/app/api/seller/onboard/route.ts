@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { cookies } from "next/headers"
-import { createSupabaseServerClient } from "@/lib/server/supabase"
+import { requireApiAuth } from "@/lib/server/apiAuth"
 import { prisma } from "@/lib/server/prisma"
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 })
+  const auth = await requireApiAuth(request)
+  if (!auth.ok) return auth.response
+  const user = { id: auth.session.userId }
 
   const body = await request.json().catch(() => null)
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 })

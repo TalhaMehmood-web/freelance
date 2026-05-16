@@ -3,23 +3,8 @@
 import { requireAuth } from "@/lib/server/auth"
 import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
+import type { EarningsStats, LedgerRow } from "@/types/seller"
 
-export interface EarningsStats {
-  availableBalanceCents: number
-  pendingClearanceCents: number
-  totalEarnedCents:      number
-  thisMonthCents:        number
-}
-
-export interface LedgerRow {
-  id:          string
-  type:        string
-  description: string
-  orderId:     string | null
-  amountCents: number
-  status:      string
-  createdAt:   string
-}
 
 export interface GetLedgerQuery {
   type?:    string

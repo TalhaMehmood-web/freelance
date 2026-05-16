@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard, Users, Building2, AlertTriangle, Package,
-  CreditCard, Star, Tag, UserCog, ShieldCheck, KeyRound, FolderTree,
+  CreditCard, Star, Tag, UserCog, ShieldCheck, KeyRound, FolderTree, MessageSquare,
 } from "lucide-react"
 import {
   Sidebar,
@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { label: "Users",              href: "/admin/users",               icon: Users },
   { label: "Organizations",      href: "/admin/orgs",                icon: Building2 },
   { label: "Gig Moderation",     href: "/admin/gigs",                icon: Package },
+  { label: "Support Inbox",      href: "/admin/support",             icon: MessageSquare },
   { label: "Disputes",           href: "/admin/disputes",            icon: AlertTriangle },
   { label: "Payments",           href: "/admin/payments",            icon: CreditCard },
   { label: "Reviews",            href: "/admin/reviews",             icon: Star },

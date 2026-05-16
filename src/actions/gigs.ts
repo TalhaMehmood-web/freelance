@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/server/auth"
 import { UserRole } from "@/lib/shared/constants"
 import { generateGigSlug } from "@/lib/shared/utils"
 import { prisma } from "@/lib/server/prisma"
-import { createAdminNotification } from "@/actions/notifications"
+import { createAdminNotification } from "@/lib/server/notifications"
 import type { ActionResult } from "@/types/shared"
 import type { SellerGigRow, GigDetail, GigCard } from "@/types/gigs"
 import type {
@@ -351,17 +351,18 @@ export const getGigBySlug = cache(async (
 // Used by the public /api/gigs route.
 
 export interface PublicGigsQuery {
-  query?:        string
-  categoryId?:   string
+  query?:         string
+  categoryId?:    string
   subcategoryId?: string
-  minPrice?:     number
-  maxPrice?:     number
-  deliveryDays?: number
-  sellerLevel?:  string
-  rating?:       number
-  sort?:         string
-  page?:         number
-  perPage?:      number
+  minPrice?:      number
+  maxPrice?:      number
+  deliveryDays?:  number
+  sellerLevel?:   string
+  rating?:        number
+  sort?:          string
+  page?:          number
+  perPage?:       number
+  excludeUserId?: string
 }
 
 export async function getPublicGigs(
@@ -369,17 +370,22 @@ export async function getPublicGigs(
 ): Promise<{ data: GigCard[]; total: number; page: number; pageCount: number; perPage: number }> {
   const {
     query, categoryId, subcategoryId, minPrice, maxPrice, deliveryDays, sellerLevel, rating,
-    sort = "newest", page = 1, perPage = 12,
+    sort = "newest", page = 1, perPage = 12, excludeUserId,
   } = params
 
   type GigWhere = NonNullable<Parameters<typeof prisma.gig.findMany>[0]>["where"]
   const where: GigWhere = {
     status: "active",
+    ...((excludeUserId || sellerLevel) && {
+      sellerProfile: {
+        ...(excludeUserId && { userId: { not: excludeUserId } }),
+        ...(sellerLevel && { sellerLevel: sellerLevel as SellerLevel }),
+      },
+    }),
     ...(query && { title: { contains: query, mode: "insensitive" } }),
     ...(categoryId && { category: { slug: categoryId } }),
     ...(subcategoryId && { subcategory: { slug: subcategoryId } }),
     ...(rating && { avgRating: { gte: rating } }),
-    ...(sellerLevel && { sellerProfile: { sellerLevel: sellerLevel as SellerLevel } }),
     ...((minPrice || maxPrice) && {
       packages: { some: { isActive: true, priceCents: { ...(minPrice ? { gte: minPrice } : {}), ...(maxPrice ? { lte: maxPrice } : {}) } } },
     }),

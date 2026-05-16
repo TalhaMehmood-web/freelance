@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Plus } from "lucide-react"
+import { useMutation } from "@tanstack/react-query"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -12,8 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { addPortfolioItem } from "@/actions/seller/portfolio"
-import type { PortfolioItem } from "@/actions/seller/portfolio"
+import { apiClient } from "@/lib/client/axios"
+import type { PortfolioItem, AddPortfolioInput } from "@/types/portfolio"
 
 const Schema = z.object({
   title:       z.string().min(3, "Title must be at least 3 characters").max(80, "Max 80 characters"),
@@ -29,29 +30,32 @@ interface AddPortfolioModalProps {
 }
 
 export function AddPortfolioModal({ open, onClose, onAdded }: AddPortfolioModalProps) {
-  const [serverError, setServerError]    = useState<string | null>(null)
-  const [isPending, startTransition]     = useTransition()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(Schema),
     defaultValues: { title: "", description: "", externalUrl: "" },
   })
 
-  function onSubmit(data: FormData) {
-    setServerError(null)
-    startTransition(async () => {
-      const result = await addPortfolioItem({
-        title:       data.title,
-        description: data.description || undefined,
-        externalUrl: data.externalUrl || undefined,
-      })
-      if (!result.success || !result.data) {
-        setServerError(result.error ?? "Something went wrong.")
-        return
-      }
-      onAdded(result.data)
+  const addMutation = useMutation({
+    mutationFn: (payload: AddPortfolioInput) =>
+      apiClient.post<{ success: boolean; data: PortfolioItem }>("/api/seller/portfolio", payload),
+    onSuccess: (res) => {
+      onAdded(res.data.data)
       form.reset()
       onClose()
+    },
+    onError: () => {
+      setServerError("Something went wrong.")
+    },
+  })
+
+  function onSubmit(data: FormData) {
+    setServerError(null)
+    addMutation.mutate({
+      title:       data.title,
+      description: data.description || undefined,
+      externalUrl: data.externalUrl || undefined,
     })
   }
 
@@ -105,11 +109,11 @@ export function AddPortfolioModal({ open, onClose, onAdded }: AddPortfolioModalP
           )}
 
           <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={addMutation.isPending}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={isPending}>
-              {isPending ? "Adding…" : "Add Item"}
+            <Button type="submit" className="flex-1" disabled={addMutation.isPending}>
+              {addMutation.isPending ? "Adding…" : "Add Item"}
             </Button>
           </div>
         </form>

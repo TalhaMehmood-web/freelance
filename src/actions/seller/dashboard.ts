@@ -3,40 +3,8 @@
 import { requireAuth } from "@/lib/server/auth"
 import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
+import type { DashboardData } from "@/types/seller"
 
-export interface DashboardStats {
-  totalEarningsCents:  number
-  earningsTrendPct:    number
-  activeOrders:        number
-  impressionsThisMonth: number
-  avgRating:           number
-  reviewCount:         number
-}
-
-export interface RecentOrder {
-  id:          string
-  title:       string
-  buyerName:   string
-  buyerAvatar: string | null
-  status:      string
-  amountCents: number
-  dueAt:       string
-}
-
-export interface TopGig {
-  id:            string
-  title:         string
-  coverImageUrl: string | null
-  totalOrders:   number
-  earningsCents: number
-  avgRating:     number
-}
-
-export interface DashboardData {
-  stats:        DashboardStats
-  recentOrders: RecentOrder[]
-  topGigs:      TopGig[]
-}
 
 // MOCK Phase 2 — replace with real Prisma queries in Phase 3
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {

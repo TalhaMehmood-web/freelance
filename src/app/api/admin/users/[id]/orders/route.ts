@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/server/auth"
+import { requireApiAuth } from "@/lib/server/apiAuth"
 import { UserRole, ActiveRole } from "@/lib/shared/constants"
 import { prisma } from "@/lib/server/prisma"
 
@@ -7,11 +7,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
 
   const { id } = await params
   const { searchParams } = new URL(req.url)

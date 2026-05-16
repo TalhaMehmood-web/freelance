@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/client/axios"
 import type { Category } from "@prisma/client"
 
 export type CategoryWithChildren = Category & { children: Category[] }
@@ -39,9 +40,8 @@ export function useCategoriesQuery(params: CategoriesQueryParams = {}) {
       if (sortDir) sp.set("sortDir", sortDir)
       sp.set("page",    String(page))
       sp.set("perPage", String(perPage))
-      const res = await fetch(`/api/admin/categories?${sp.toString()}`)
-      if (!res.ok) throw new Error("Failed to fetch categories")
-      return res.json() as Promise<CategoriesApiResponse>
+      const res = await apiClient.get<CategoriesApiResponse>(`/api/admin/categories?${sp.toString()}`)
+      return res.data
     },
     staleTime: 30_000,
   })

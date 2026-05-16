@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
+import { apiClient as axios } from "@/lib/client/axios"
 import { toast } from "sonner"
-import { Plus } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { type SortingState } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import { DebouncedSearchInput } from "@/components/ui/debounced-search-input"
 import { buildPermissionColumns } from "./permissionColumns"
 import { PermissionForm } from "./PermissionForm"
 import { ResourceCombobox } from "./ResourceCombobox"
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog"
 import type { PermissionRow } from "@/types/admin"
 
 const PER_PAGE = 15
@@ -36,7 +37,9 @@ export function PermissionsTable({ isSuperAdmin }: Props) {
   const [search, setSearch]     = useState("")
   const [resource, setResource] = useState("all")
   const [sorting, setSorting]   = useState<SortingState>([{ id: "resource", desc: false }])
-  const [formOpen, setFormOpen] = useState(false)
+  const [formOpen, setFormOpen]           = useState(false)
+  const [deleteTarget, setDeleteTarget]   = useState<PermissionRow | null>(null)
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
 
   const sortBy  = sorting[0]?.id  ?? "resource"
   const sortDir = sorting[0]?.desc ? "desc" : "asc"
@@ -60,6 +63,7 @@ export function PermissionsTable({ isSuperAdmin }: Props) {
       axios.delete(`/api/admin/permissions?id=${encodeURIComponent(id)}`),
     onSuccess: () => {
       toast.success("Permission deleted.")
+      setDeleteTarget(null)
       queryClient.invalidateQueries({ queryKey: ["admin-permissions"] })
       queryClient.invalidateQueries({ queryKey: ["admin-roles"] })
       queryClient.invalidateQueries({ queryKey: ["admin-resources"] })
@@ -69,10 +73,21 @@ export function PermissionsTable({ isSuperAdmin }: Props) {
     },
   })
 
+  const deleteAllMutation = useMutation({
+    mutationFn: () => axios.delete("/api/admin/permissions"),
+    onSuccess: (res) => {
+      toast.success(`All ${res.data.deleted} permissions deleted.`)
+      setDeleteAllOpen(false)
+      queryClient.invalidateQueries({ queryKey: ["admin-permissions"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-roles"] })
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error ?? "Failed to delete all permissions.")
+    },
+  })
+
   function handleDelete(perm: PermissionRow) {
-    if (perm.isBuiltIn) return
-    if (!confirm(`Delete permission "${perm.label}"? It will be removed from all roles.`)) return
-    deleteMutation.mutate(perm.id)
+    setDeleteTarget(perm)
   }
 
   function handleSearch(val: string) {
@@ -119,10 +134,16 @@ export function PermissionsTable({ isSuperAdmin }: Props) {
         </div>
 
         {isSuperAdmin && (
-          <Button size="sm" onClick={() => setFormOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Add Permission
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="destructive" onClick={() => setDeleteAllOpen(true)}>
+              <Trash2 className="w-4 h-4" />
+              Delete All
+            </Button>
+            <Button size="sm" onClick={() => setFormOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Add Permission
+            </Button>
+          </div>
         )}
       </div>
 
@@ -143,6 +164,24 @@ export function PermissionsTable({ isSuperAdmin }: Props) {
       <PermissionForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
+      />
+
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Permission"
+        description={deleteTarget ? `Delete "${deleteTarget.label}"? It will be removed from all roles.` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteAllOpen}
+        title="Delete All Permissions"
+        description="This will permanently delete every permission and remove them from all roles. This cannot be undone."
+        isPending={deleteAllMutation.isPending}
+        onConfirm={() => deleteAllMutation.mutate()}
+        onCancel={() => setDeleteAllOpen(false)}
       />
     </>
   )

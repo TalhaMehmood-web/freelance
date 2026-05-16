@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useTransition } from "react"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useQuery } from "@tanstack/react-query"
-import axios from "axios"
+import { useQuery, useMutation } from "@tanstack/react-query"
 import { Shield } from "lucide-react"
 import {
   Sheet,
@@ -19,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { PermissionMatrix } from "./PermissionMatrix"
-import { createRole, updateRole } from "@/actions/admin/permissions"
+import { apiClient } from "@/lib/client/axios"
 import type { RoleRow, PermissionRow } from "@/types/admin"
 
 const schema = z.object({
@@ -45,11 +44,9 @@ interface RoleFormProps {
 }
 
 export function RoleForm({ open, onClose, onSaved, role, isSuperAdmin }: RoleFormProps) {
-  const [isPending, startTransition] = useTransition()
-
   const { data: permsData } = useQuery<PermissionsResponse>({
     queryKey: ["admin-permissions", { page: 1, search: "", resource: "", sortBy: "resource", sortDir: "asc" }],
-    queryFn:  () => axios.get("/api/admin/permissions", {
+    queryFn:  () => apiClient.get("/api/admin/permissions", {
       params: { page: 1, perPage: 500, sortBy: "resource", sortDir: "asc" },
     }).then(r => r.data),
     enabled: open,
@@ -88,6 +85,19 @@ export function RoleForm({ open, onClose, onSaved, role, isSuperAdmin }: RoleFor
     }
   }, [open, role])
 
+  const saveMutation = useMutation({
+    mutationFn: (values: FormValues) => isEdit
+      ? apiClient.put<{ success: boolean; data: RoleRow }>(`/api/admin/roles/${role!.id}`, values)
+      : apiClient.post<{ success: boolean; data: RoleRow }>("/api/admin/roles", values),
+    onSuccess: (res) => {
+      onSaved(res.data.data)
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error ?? "Something went wrong."
+      setError("root", { message: msg })
+    },
+  })
+
   function autoSlug(label: string) {
     return label.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "")
   }
@@ -102,17 +112,7 @@ export function RoleForm({ open, onClose, onSaved, role, isSuperAdmin }: RoleFor
   }
 
   function onSubmit(values: FormValues) {
-    startTransition(async () => {
-      const result = isEdit
-        ? await updateRole(role!.id, values)
-        : await createRole(values)
-
-      if (!result.success) {
-        setError("root", { message: result.error ?? "Something went wrong." })
-        return
-      }
-      onSaved(result.data!)
-    })
+    saveMutation.mutate(values)
   }
 
   const selectedPermissions = watch("permissions")
@@ -186,7 +186,7 @@ export function RoleForm({ open, onClose, onSaved, role, isSuperAdmin }: RoleFor
                 permissions={permissions}
                 selected={selectedPermissions}
                 onChange={handlePermissionChange}
-                disabled={isPending}
+                disabled={saveMutation.isPending}
                 isSuperAdmin={isSuperAdmin}
               />
             </div>
@@ -199,12 +199,12 @@ export function RoleForm({ open, onClose, onSaved, role, isSuperAdmin }: RoleFor
           </div>
 
           <div className="shrink-0 flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-surface">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={saveMutation.isPending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={saveMutation.isPending}>
               <Shield className="w-4 h-4" />
-              {isPending ? "Saving…" : isEdit ? "Save Changes" : "Create Role"}
+              {saveMutation.isPending ? "Saving…" : isEdit ? "Save Changes" : "Create Role"}
             </Button>
           </div>
         </form>

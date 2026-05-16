@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext } from "react"
-import type { CategoryWithChildren } from "@/actions/categories"
+import type { CategoryWithChildren } from "@/types/categories"
 
 interface GigWizardContextValue {
   categories: CategoryWithChildren[]

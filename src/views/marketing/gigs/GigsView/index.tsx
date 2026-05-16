@@ -26,7 +26,7 @@ import { FilterSheet } from "./FilterSheet";
 import { ActiveFilters } from "./ActiveFilters";
 import { usePublicGigsQuery } from "./hooks/usePublicGigsQuery";
 import type { GigFilters } from "./types";
-import type { CategoryWithChildren } from "@/actions/categories";
+import type { CategoryWithChildren } from "@/types/categories";
 
 const SORT_OPTIONS = [
   { label: "Best Match", value: "relevance" },

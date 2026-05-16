@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { MoreHorizontal, Pencil, Pause, Play, Trash2, ExternalLink, Copy, Eye } from "lucide-react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
@@ -11,7 +12,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
-import { toggleGigStatus, deleteGig } from "@/actions/gigs"
+import { apiClient } from "@/lib/client/axios"
 import type { SellerGigRow } from "@/types/gigs"
 
 interface GigActionsCellProps {
@@ -20,24 +21,28 @@ interface GigActionsCellProps {
 }
 
 export function GigActionsCell({ gig, onMutate }: GigActionsCellProps) {
-  const [isPending, startTransition] = useTransition()
-  const [deleteOpen, setDeleteOpen]  = useState(false)
+  const queryClient = useQueryClient()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
-  function handleToggle() {
-    startTransition(async () => {
-      const next = gig.status === "active" ? "paused" : "active"
-      await toggleGigStatus(gig.id, next)
+  const toggleMutation = useMutation({
+    mutationFn: (status: "active" | "paused") =>
+      apiClient.patch(`/api/seller/gigs/${gig.id}`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-gigs"] })
       onMutate?.()
-    })
-  }
+    },
+  })
 
-  function handleDelete() {
-    startTransition(async () => {
-      await deleteGig(gig.id)
+  const deleteMutation = useMutation({
+    mutationFn: () => apiClient.delete(`/api/seller/gigs/${gig.id}`),
+    onSuccess: () => {
       setDeleteOpen(false)
+      queryClient.invalidateQueries({ queryKey: ["seller-gigs"] })
       onMutate?.()
-    })
-  }
+    },
+  })
+
+  const isPending = toggleMutation.isPending || deleteMutation.isPending
 
   return (
     <>
@@ -85,7 +90,7 @@ export function GigActionsCell({ gig, onMutate }: GigActionsCellProps) {
 
             <DropdownMenuGroup>
               <DropdownMenuItem
-                onClick={handleToggle}
+                onClick={() => toggleMutation.mutate(gig.status === "active" ? "paused" : "active")}
                 disabled={isPending || gig.status === "draft"}
               >
                 {gig.status === "active"
@@ -123,8 +128,8 @@ export function GigActionsCell({ gig, onMutate }: GigActionsCellProps) {
             <Button variant="outline" className="flex-1" onClick={() => setDeleteOpen(false)} disabled={isPending}>
               Cancel
             </Button>
-            <Button variant="destructive" className="flex-1" onClick={handleDelete} disabled={isPending}>
-              {isPending ? "Deleting…" : "Delete"}
+            <Button variant="destructive" className="flex-1" onClick={() => deleteMutation.mutate()} disabled={isPending}>
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </Button>
           </div>
         </DialogContent>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { requireAuth } from "@/lib/server/auth"
+import { requireApiAuth } from "@/lib/server/apiAuth"
 
 const BUCKET      = "freelance-project"
 const MAX_BYTES   = 3 * 1024 * 1024          // 3 MB
@@ -19,11 +19,8 @@ function serviceClient() {
 // Returns: { url: string, path: string }
 
 export async function POST(req: NextRequest) {
-  try {
-    await requireAuth()
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req)
+  if (!auth.ok) return auth.response
 
   const formData = await req.formData().catch(() => null)
   if (!formData) {
@@ -77,11 +74,8 @@ export async function POST(req: NextRequest) {
 // Body: JSON { path: string }
 
 export async function DELETE(req: NextRequest) {
-  try {
-    await requireAuth()
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req)
+  if (!auth.ok) return auth.response
 
   const body = await req.json().catch(() => null)
   const path = body?.path as string | undefined

@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/server/auth"
+import { requireApiAuth } from "@/lib/server/apiAuth"
 import { UserRole } from "@/lib/shared/constants"
 import { prisma } from "@/lib/server/prisma"
 
 export async function GET(req: NextRequest) {
-  let session
-  try {
-    session = await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
+  const { session } = auth
 
   const { searchParams } = new URL(req.url)
   const unreadOnly = searchParams.get("unread") === "true"
@@ -42,12 +39,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  let session
-  try {
-    session = await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
+  const { session } = auth
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")

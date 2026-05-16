@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
+import { apiClient as axios } from "@/lib/client/axios"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
 import { type SortingState } from "@tanstack/react-table"
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { DebouncedSearchInput } from "@/components/ui/debounced-search-input"
 import { RoleForm } from "./RoleForm"
 import { AssignPermissionsDialog } from "./AssignPermissionsDialog"
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog"
 import { buildRoleColumns } from "./roleColumns"
 import type { RoleRow } from "@/types/admin"
 
@@ -37,7 +38,8 @@ export function RolesTable({ isSuperAdmin }: Props) {
   const [formOpen, setFormOpen]     = useState(false)
   const [editTarget, setEditTarget] = useState<RoleRow | null>(null)
   const [assignTarget, setAssignTarget] = useState<RoleRow | null>(null)
-  const [assignOpen, setAssignOpen] = useState(false)
+  const [assignOpen, setAssignOpen]     = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<RoleRow | null>(null)
 
   const sortBy  = sorting[0]?.id  ?? "createdAt"
   const sortDir = sorting[0]?.desc ? "desc" : "asc"
@@ -53,6 +55,7 @@ export function RolesTable({ isSuperAdmin }: Props) {
     mutationFn: (id: string) => axios.delete(`/api/admin/roles/${id}`),
     onSuccess: () => {
       toast.success("Role deleted.")
+      setDeleteTarget(null)
       queryClient.invalidateQueries({ queryKey: ["admin-roles"] })
     },
     onError: (err: any) => {
@@ -62,8 +65,7 @@ export function RolesTable({ isSuperAdmin }: Props) {
 
   function handleDelete(role: RoleRow) {
     if (role.isBuiltIn) return
-    if (!confirm(`Delete role "${role.label}"? This cannot be undone.`)) return
-    deleteMutation.mutate(role.id)
+    setDeleteTarget(role)
   }
 
   function handleEdit(role: RoleRow) {
@@ -154,6 +156,15 @@ export function RolesTable({ isSuperAdmin }: Props) {
         open={assignOpen}
         onClose={() => { setAssignOpen(false); setAssignTarget(null) }}
         isSuperAdmin={isSuperAdmin}
+      />
+
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Role"
+        description={deleteTarget ? `Delete role "${deleteTarget.label}"? This cannot be undone.` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
       />
     </>
   )

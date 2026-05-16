@@ -1075,7 +1075,6 @@ model Permission {
   description String   @default("")
   resource    String
   action      String
-  isBuiltIn   Boolean  @default(true) @map("is_built_in")
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("permissions")
@@ -1085,7 +1084,6 @@ model PermissionResource {
   id        String   @id @default(cuid())
   slug      String   @unique
   label     String
-  isBuiltIn Boolean  @default(false) @map("is_built_in")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("permission_resources")
@@ -1095,7 +1093,6 @@ model PermissionAction {
   id        String   @id @default(cuid())
   slug      String   @unique
   label     String
-  isBuiltIn Boolean  @default(false) @map("is_built_in")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("permission_actions")

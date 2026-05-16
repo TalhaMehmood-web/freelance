@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/server/auth"
+import { requireApiAuth } from "@/lib/server/apiAuth"
 import { UserRole } from "@/lib/shared/constants"
 import { prisma } from "@/lib/server/prisma"
 
@@ -10,11 +10,8 @@ const VALID_STATUS = ["active", "paused", "draft", "suspended"] as const
 type GigStatus = typeof VALID_STATUS[number]
 
 export async function GET(req: NextRequest) {
-  try {
-    await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
 
   const { searchParams } = new URL(req.url)
   const search   = searchParams.get("search")?.trim() ?? ""
@@ -70,4 +67,20 @@ export async function GET(req: NextRequest) {
   }))
 
   return NextResponse.json({ data, total, pageCount: Math.max(1, Math.ceil(total / perPage)), page, perPage })
+}
+
+// PATCH /api/admin/gigs — toggle gig status (body: { gigId, status })
+export async function PATCH(req: NextRequest) {
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
+
+  const { gigId, status }: { gigId: string; status: "active" | "paused" } = await req.json()
+
+  if (!gigId || (status !== "active" && status !== "paused")) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 })
+  }
+
+  await prisma.gig.update({ where: { id: gigId }, data: { status } })
+
+  return NextResponse.json({ success: true, data: { gigId, status } })
 }

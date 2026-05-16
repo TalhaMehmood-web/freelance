@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatNumber, formatRelativeTime, getInitials } from "@/lib/shared/utils"
-import type { DashboardData } from "@/actions/seller/dashboard"
+import type { DashboardData } from "@/types/seller"
 
 const STATUS_BADGE: Record<string, string> = {
   active:      "bg-blue-50 text-blue-700 border-blue-200",

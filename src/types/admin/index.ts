@@ -42,14 +42,12 @@ export interface PermissionRow {
   description: string
   resource:    string
   action:      string
-  isBuiltIn:   boolean
 }
 
 export interface PermissionResourceRow {
   id:        string
   slug:      string
   label:     string
-  isBuiltIn: boolean
   createdAt: string
 }
 
@@ -57,7 +55,6 @@ export interface PermissionActionRow {
   id:        string
   slug:      string
   label:     string
-  isBuiltIn: boolean
   createdAt: string
 }
 

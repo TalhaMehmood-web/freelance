@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { apiClient as axios } from "@/lib/client/axios";
 import { z } from "zod";
 import { Search } from "lucide-react";
 import { type SortingState } from "@tanstack/react-table";

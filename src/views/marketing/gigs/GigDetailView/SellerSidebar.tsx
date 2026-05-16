@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { Star, MapPin, MessageCircle, CheckCircle2, Clock, ShoppingBag } from "lucide-react"
+import { Star, MapPin, CheckCircle2, Clock, ShoppingBag } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SellerLevelBadge } from "@/components/freelancer/SellerLevelBadge"
+import { ContactSellerButton } from "@/components/messaging/ContactSellerButton"
 import { formatRating, formatNumber, getInitials } from "@/lib/shared/utils"
 import type { SellerProfilePublic } from "@/types/freelancer"
 
@@ -116,9 +117,7 @@ export function SellerSidebar({ seller }: { seller: SellerProfilePublic }) {
           <Button className="w-full" size="sm" render={<Link href={`/freelancers/${seller.username}`} />}>
             View Profile
           </Button>
-          <Button variant="outline" className="w-full" size="sm" disabled>
-            <MessageCircle className="h-3.5 w-3.5 mr-1.5" />Contact
-          </Button>
+          <ContactSellerButton sellerUserId={seller.userId} className="w-full" />
         </div>
       </div>
     </div>

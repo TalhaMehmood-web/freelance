@@ -4,6 +4,7 @@ import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/shared/utils"
 import { ActiveRole } from "@/lib/shared/constants"
+import { apiClient } from "@/lib/client/axios"
 
 interface RoleToggleProps {
   activeRole: ActiveRole
@@ -18,12 +19,8 @@ export function RoleToggle({ activeRole, hasSeller }: RoleToggleProps) {
     if (role === activeRole) return
 
     startTransition(async () => {
-      const res = await fetch("/api/role/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      })
-      if (res.ok) {
+      const res = await apiClient.post("/api/role/switch", { role })
+      if (res.status === 200) {
         router.push(`/${role}/dashboard`)
         router.refresh()
       }

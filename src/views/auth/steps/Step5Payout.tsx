@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { CreditCard, Building, Wallet, Sparkles, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/shared/utils"
+import { apiClient } from "@/lib/client/axios"
 
 const METHODS = [
   {
@@ -46,13 +47,9 @@ export function Step5Payout() {
       const step4 = JSON.parse(sessionStorage.getItem("seller_step4") ?? "{}")
       const step5 = { payoutMethod: selected }
 
-      const res = await fetch("/api/seller/onboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...step1, ...step2, ...step3, ...step4, ...step5 }),
-      })
+      const res = await apiClient.post("/api/seller/onboard", { ...step1, ...step2, ...step3, ...step4, ...step5 }).catch(() => null)
 
-      if (res.ok) {
+      if (res?.status === 200 || res?.status === 201) {
         ;["seller_step1", "seller_step2", "seller_step3", "seller_step4", "seller_step5"].forEach(
           (k) => sessionStorage.removeItem(k)
         )

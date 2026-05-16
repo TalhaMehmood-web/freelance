@@ -53,7 +53,7 @@ export async function createPermission(raw: unknown): Promise<ActionResult<Permi
   if (existing) return { success: false, error: `A permission with key "${key}" already exists.` }
 
   const permission = await prisma.permission.create({
-    data: { key, label, description, resource, action, isBuiltIn: false },
+    data: { key, label, description, resource, action },
   })
 
   // Always auto-assign to the built-in admin role (super admins inherit all admin role permissions)
@@ -85,7 +85,6 @@ export async function createPermission(raw: unknown): Promise<ActionResult<Permi
       description: permission.description,
       resource:    permission.resource,
       action:      permission.action,
-      isBuiltIn:   permission.isBuiltIn,
     },
   }
 }
@@ -96,7 +95,6 @@ export async function deletePermission(id: string): Promise<ActionResult> {
 
   const existing = await prisma.permission.findUnique({ where: { id } })
   if (!existing) return { success: false, error: "Permission not found." }
-  if (existing.isBuiltIn) return { success: false, error: "Built-in permissions cannot be deleted." }
 
   // Remove this key from all roles that have it
   const rolesWithPerm = await prisma.role.findMany({
@@ -220,27 +218,6 @@ export async function deleteRole(id: string): Promise<ActionResult> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = prisma as any
 
-const BUILT_IN_RESOURCES = [
-  { slug: "users",      label: "Users"         },
-  { slug: "gigs",       label: "Gigs"          },
-  { slug: "payments",   label: "Payments"      },
-  { slug: "disputes",   label: "Disputes"      },
-  { slug: "categories", label: "Categories"    },
-  { slug: "coupons",    label: "Coupons"       },
-  { slug: "orgs",       label: "Organizations" },
-  { slug: "audit_logs", label: "Audit Logs"    },
-  { slug: "roles",      label: "Roles"         },
-]
-
-const BUILT_IN_ACTIONS = [
-  { slug: "read",   label: "Read"   },
-  { slug: "create", label: "Create" },
-  { slug: "edit",   label: "Edit"   },
-  { slug: "delete", label: "Delete" },
-  { slug: "update", label: "Update" },
-  { slug: "manage", label: "Manage" },
-]
-
 export async function createResource(raw: unknown): Promise<ActionResult<{ id: string; slug: string; label: string }>> {
   const session = await requireAuth(UserRole.Admin)
   await requireSuperAdmin(session)
@@ -255,7 +232,7 @@ export async function createResource(raw: unknown): Promise<ActionResult<{ id: s
   const existing = await db.permissionResource.findUnique({ where: { slug } })
   if (existing) return { success: false, error: `Resource "${slug}" already exists.` }
 
-  const row = await db.permissionResource.create({ data: { slug, label, isBuiltIn: false } })
+  const row = await db.permissionResource.create({ data: { slug, label } })
   return { success: true, data: { id: row.id, slug: row.slug, label: row.label } }
 }
 
@@ -265,7 +242,6 @@ export async function deleteResource(id: string): Promise<ActionResult> {
 
   const existing = await db.permissionResource.findUnique({ where: { id } })
   if (!existing) return { success: false, error: "Resource not found." }
-  if (existing.isBuiltIn) return { success: false, error: "Built-in resources cannot be deleted." }
 
   await db.permissionResource.delete({ where: { id } })
   return { success: true }
@@ -285,7 +261,7 @@ export async function createAction(raw: unknown): Promise<ActionResult<{ id: str
   const existing = await db.permissionAction.findUnique({ where: { slug } })
   if (existing) return { success: false, error: `Action "${slug}" already exists.` }
 
-  const row = await db.permissionAction.create({ data: { slug, label, isBuiltIn: false } })
+  const row = await db.permissionAction.create({ data: { slug, label } })
   return { success: true, data: { id: row.id, slug: row.slug, label: row.label } }
 }
 
@@ -295,53 +271,7 @@ export async function deleteAction(id: string): Promise<ActionResult> {
 
   const existing = await db.permissionAction.findUnique({ where: { id } })
   if (!existing) return { success: false, error: "Action not found." }
-  if (existing.isBuiltIn) return { success: false, error: "Built-in actions cannot be deleted." }
 
   await db.permissionAction.delete({ where: { id } })
-  return { success: true }
-}
-
-export async function seedBuiltInRolesAndPermissions(): Promise<ActionResult> {
-  const session = await requireAuth(UserRole.Admin)
-  await requireSuperAdmin(session)
-
-  for (const r of BUILT_IN_RESOURCES) {
-    await db.permissionResource.upsert({
-      where:  { slug: r.slug },
-      create: { slug: r.slug, label: r.label, isBuiltIn: true },
-      update: { label: r.label },
-    })
-  }
-
-  for (const a of BUILT_IN_ACTIONS) {
-    await db.permissionAction.upsert({
-      where:  { slug: a.slug },
-      create: { slug: a.slug, label: a.label, isBuiltIn: true },
-      update: { label: a.label },
-    })
-  }
-
-  for (const p of BUILT_IN_PERMISSIONS) {
-    await prisma.permission.upsert({
-      where:  { key: p.key },
-      create: { key: p.key, label: p.label, description: p.description, resource: p.resource, action: p.action, isBuiltIn: true },
-      update: { label: p.label, description: p.description },
-    })
-  }
-
-  const builtInRoles = [
-    { slug: UserRole.Buyer,  label: "Buyer",  description: "Default buyer role — can browse and purchase gigs",     permissions: [] as string[] },
-    { slug: UserRole.Seller, label: "Seller", description: "Seller role — can create gigs and fulfill orders",      permissions: [] as string[] },
-    { slug: UserRole.Admin,  label: "Admin",  description: "Admin role — access to admin dashboard and moderation", permissions: BUILT_IN_PERMISSIONS.filter(p => p.key !== "roles:manage").map(p => p.key) },
-  ]
-
-  for (const r of builtInRoles) {
-    await prisma.role.upsert({
-      where:  { slug: r.slug },
-      create: { ...r, isBuiltIn: true },
-      update: { label: r.label, description: r.description },
-    })
-  }
-
   return { success: true }
 }

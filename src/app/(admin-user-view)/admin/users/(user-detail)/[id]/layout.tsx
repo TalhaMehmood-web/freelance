@@ -46,7 +46,7 @@ export default async function UserDashboardLayout({ children, params }: Props) {
   return (
     <SidebarProvider>
     <div className="flex flex-col min-h-screen bg-surface-subtle w-full">
-      <AppHeader variant="dashboard" session={session} hideDefaultBell hideRoleToggle />
+      <AppHeader variant="dashboard" session={session} hideRoleToggle />
       <div className="flex flex-1 pt-16">
         <UserDashboardSidebar
           userId={profile.userId}

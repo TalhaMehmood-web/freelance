@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm, FormProvider, type UseFormReturn } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ChevronLeft, ChevronRight, Loader2, Save, Sparkles } from "lucide-react"
+import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { StepIndicator } from "@/views/seller/GigCreateView/StepIndicator"
 import { Step1Overview } from "@/views/seller/GigCreateView/Step1Overview"
@@ -17,9 +18,9 @@ import {
   GigBasicsSchema, GigPricingSchema, GigDescriptionSchema, GigGallerySchema,
   type GigBasicsData, type GigPricingData, type GigDescriptionData, type GigGalleryData,
 } from "@/schemas/client/gigs"
-import { updateGig } from "@/actions/gigs"
 import { GigWizardProvider } from "@/views/seller/GigCreateView/GigWizardContext"
-import type { CategoryWithChildren } from "@/actions/categories"
+import { apiClient } from "@/lib/client/axios"
+import type { CategoryWithChildren } from "@/types/categories"
 
 const TOTAL_STEPS = 5
 
@@ -51,7 +52,6 @@ export function GigEditView({
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [serverError, setServerError] = useState<string | null>(null)
-  const [isPending, startTransition]  = useTransition()
 
   const [basicsData,      setBasicsData]      = useState<GigBasicsData | null>(initialBasics)
   const [pricingData,     setPricingData]     = useState<GigPricingData | null>(initialPricing)
@@ -72,6 +72,17 @@ export function GigEditView({
   const galleryForm = useForm<GigGalleryData>({
     resolver: zodResolver(GigGallerySchema),
     defaultValues: initialGallery,
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: { basics: GigBasicsData; pricing: GigPricingData; description: GigDescriptionData; gallery: GigGalleryData }) =>
+      apiClient.put<{ success: boolean; data: { gigId: string } }>(`/api/seller/gigs/${gigId}`, payload),
+    onSuccess: () => {
+      router.push("/seller/gigs")
+    },
+    onError: () => {
+      setServerError("Something went wrong. Please try again.")
+    },
   })
 
   async function handleNext() {
@@ -100,18 +111,11 @@ export function GigEditView({
   function handleSave() {
     if (!basicsData || !pricingData || !descriptionData) return
     setServerError(null)
-    startTransition(async () => {
-      const result = await updateGig(gigId, {
-        basics:      basicsData,
-        pricing:     pricingData,
-        description: descriptionData,
-        gallery:     galleryForm.getValues(),
-      })
-      if (!result.success) {
-        setServerError(result.error ?? "Something went wrong. Please try again.")
-        return
-      }
-      router.push("/seller/gigs")
+    saveMutation.mutate({
+      basics:      basicsData,
+      pricing:     pricingData,
+      description: descriptionData,
+      gallery:     galleryForm.getValues(),
     })
   }
 
@@ -201,10 +205,10 @@ export function GigEditView({
                   <Button
                     type="button"
                     onClick={handleSave}
-                    disabled={isPending || !basicsData || !pricingData || !descriptionData}
+                    disabled={saveMutation.isPending || !basicsData || !pricingData || !descriptionData}
                     className="gap-1.5 min-w-36"
                   >
-                    {isPending ? (
+                    {saveMutation.isPending ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
                     ) : (
                       <><Sparkles className="h-4 w-4" /> Save Changes</>

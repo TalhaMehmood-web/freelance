@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { updateNotifications } from "@/actions/seller/settings"
-import type { SellerSettingsData } from "@/actions/seller/settings"
+import { apiClient } from "@/lib/client/axios"
+import type { SellerSettingsData } from "@/types/seller"
 
 const Schema = z.object({
   newOrder:    z.boolean(),
@@ -28,21 +29,22 @@ const NOTIFICATION_ITEMS = [
 export function NotificationsTab({ defaults }: { defaults: SellerSettingsData }) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [saved, setSaved]             = useState(false)
-  const [isPending, startTransition]  = useTransition()
 
   const form = useForm<FormData>({
     resolver: zodResolver(Schema),
     defaultValues: defaults.notifications,
   })
 
+  const saveMutation = useMutation({
+    mutationFn: (data: FormData) => apiClient.patch("/api/seller/settings/notifications", data),
+    onSuccess: () => setSaved(true),
+    onError:   () => setServerError("Failed to save."),
+  })
+
   function onSubmit(data: FormData) {
     setServerError(null)
     setSaved(false)
-    startTransition(async () => {
-      const result = await updateNotifications(data)
-      if (!result.success) { setServerError(result.error ?? "Failed to save."); return }
-      setSaved(true)
-    })
+    saveMutation.mutate(data)
   }
 
   return (
@@ -71,7 +73,7 @@ export function NotificationsTab({ defaults }: { defaults: SellerSettingsData })
       {serverError && <p className="text-sm text-danger-600 bg-danger-50 border border-danger-100 rounded-xl px-3 py-2">{serverError}</p>}
       {saved && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2">Notification preferences saved.</p>}
 
-      <Button type="submit" disabled={isPending}>{isPending ? "Saving…" : "Save Changes"}</Button>
+      <Button type="submit" disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving…" : "Save Changes"}</Button>
     </form>
   )
 }

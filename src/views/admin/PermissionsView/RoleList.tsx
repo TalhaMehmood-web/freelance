@@ -1,11 +1,11 @@
 "use client"
 
-import { useTransition } from "react"
 import { Shield, Trash2, Pencil, Lock } from "lucide-react"
+import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/shared/utils"
-import { deleteRole } from "@/actions/admin/permissions"
+import { apiClient } from "@/lib/client/axios"
 import type { RoleRow } from "@/types/admin"
 
 interface RoleListProps {
@@ -24,13 +24,15 @@ const ROLE_COLOR: Record<string, string> = {
 }
 
 export function RoleList({ roles, selected, onSelect, onEdit, onDeleted, isSuperAdmin }: RoleListProps) {
-  const [isPending, startTransition] = useTransition()
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/api/admin/roles/${id}`),
+    onSuccess:  (_, id) => onDeleted(id),
+  })
+
+  const isPending = deleteMutation.isPending
 
   function handleDelete(role: RoleRow) {
-    startTransition(async () => {
-      const result = await deleteRole(role.id)
-      if (result.success) onDeleted(role.id)
-    })
+    deleteMutation.mutate(role.id)
   }
 
   return (

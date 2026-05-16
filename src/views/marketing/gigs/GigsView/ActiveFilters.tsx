@@ -4,7 +4,7 @@ import { X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { GigFilters } from "./types"
-import type { CategoryWithChildren } from "@/actions/categories"
+import type { CategoryWithChildren } from "@/types/categories"
 
 const DELIVERY_OPTIONS = [
   { label: "Any",       value: "" },

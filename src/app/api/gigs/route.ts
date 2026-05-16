@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getPublicGigs } from "@/actions/gigs"
+import { getServerSession } from "@/lib/server/auth"
 
 const QuerySchema = z.object({
   query:         z.string().max(200).optional().default(""),
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
   const { query, categoryId, subcategoryId, minPrice, maxPrice, deliveryDays, sellerLevel, rating, sort, page, perPage } = parsed.data
 
   try {
+    const session = await getServerSession()
     const result = await getPublicGigs({
       query:         query || undefined,
       categoryId:    categoryId || undefined,
@@ -51,6 +53,7 @@ export async function GET(req: NextRequest) {
       sort,
       page,
       perPage,
+      excludeUserId: session?.userId,
     })
 
     return NextResponse.json(result)

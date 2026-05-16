@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import axios from "axios"
+import { apiClient as axios } from "@/lib/client/axios"
 import type { SellerGigRow } from "@/types/gigs"
 
 export interface UserDetailData {

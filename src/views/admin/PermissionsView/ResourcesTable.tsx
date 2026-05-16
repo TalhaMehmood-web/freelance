@@ -2,12 +2,13 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
+import { apiClient as axios } from "@/lib/client/axios"
 import { toast } from "sonner"
-import { Plus, Trash2, ShieldCheck, Box } from "lucide-react"
+import { Plus, Trash2, Box } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog"
 import type { PermissionResourceRow } from "@/types/admin"
 
 interface Props {
@@ -20,9 +21,11 @@ interface ResourcesResponse {
 
 export function ResourcesTable({ isSuperAdmin }: Props) {
   const queryClient = useQueryClient()
-  const [adding, setAdding] = useState(false)
-  const [label, setLabel]   = useState("")
-  const [slug, setSlug]     = useState("")
+  const [adding, setAdding]             = useState(false)
+  const [label, setLabel]               = useState("")
+  const [slug, setSlug]                 = useState("")
+  const [deleteTarget, setDeleteTarget] = useState<PermissionResourceRow | null>(null)
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
 
   const { data, isLoading } = useQuery<ResourcesResponse>({
     queryKey: ["admin-resources"],
@@ -50,10 +53,23 @@ export function ResourcesTable({ isSuperAdmin }: Props) {
     mutationFn: (id: string) => axios.delete(`/api/admin/resources/${id}`),
     onSuccess: () => {
       toast.success("Resource deleted.")
+      setDeleteTarget(null)
       queryClient.invalidateQueries({ queryKey: ["admin-resources"] })
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.error ?? "Failed to delete resource.")
+    },
+  })
+
+  const deleteAllMutation = useMutation({
+    mutationFn: () => axios.delete("/api/admin/resources"),
+    onSuccess: (res) => {
+      toast.success(`All ${res.data.deleted} resources deleted.`)
+      setDeleteAllOpen(false)
+      queryClient.invalidateQueries({ queryKey: ["admin-resources"] })
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error ?? "Failed to delete all resources.")
     },
   })
 
@@ -68,9 +84,7 @@ export function ResourcesTable({ isSuperAdmin }: Props) {
   }
 
   function handleDelete(row: PermissionResourceRow) {
-    if (row.isBuiltIn) return
-    if (!confirm(`Delete resource "${row.slug}"? Existing permissions using this resource will not be affected.`)) return
-    deleteMutation.mutate(row.id)
+    setDeleteTarget(row)
   }
 
   return (
@@ -82,10 +96,16 @@ export function ResourcesTable({ isSuperAdmin }: Props) {
           <Badge variant="secondary" className="text-xs">{rows.length}</Badge>
         </div>
         {isSuperAdmin && !adding && (
-          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
-            <Plus className="w-3.5 h-3.5" />
-            Add Resource
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="destructive" onClick={() => setDeleteAllOpen(true)}>
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete All
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+              <Plus className="w-3.5 h-3.5" />
+              Add Resource
+            </Button>
+          </div>
         )}
       </div>
 
@@ -131,19 +151,12 @@ export function ResourcesTable({ isSuperAdmin }: Props) {
               <span className="text-sm text-text-primary truncate">{row.label}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {row.isBuiltIn ? (
-                <Badge variant="secondary" className="text-xs gap-1">
-                  <ShieldCheck className="w-3 h-3" /> Built-in
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-xs">Custom</Badge>
-              )}
               {isSuperAdmin && (
                 <Button
                   size="icon"
                   variant="ghost"
                   className="h-7 w-7 text-text-tertiary hover:text-danger-600"
-                  disabled={row.isBuiltIn || deleteMutation.isPending}
+                  disabled={deleteMutation.isPending}
                   onClick={() => handleDelete(row)}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -153,6 +166,23 @@ export function ResourcesTable({ isSuperAdmin }: Props) {
           </div>
         ))}
       </div>
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Resource"
+        description={deleteTarget ? `Delete resource "${deleteTarget.slug}"? Existing permissions using it will not be affected.` : ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteAllOpen}
+        title="Delete All Resources"
+        description="This will permanently delete every resource. Existing permissions using them will not be affected."
+        isPending={deleteAllMutation.isPending}
+        onConfirm={() => deleteAllMutation.mutate()}
+        onCancel={() => setDeleteAllOpen(false)}
+      />
     </div>
   )
 }

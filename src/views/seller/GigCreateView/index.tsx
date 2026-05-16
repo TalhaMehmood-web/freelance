@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm, FormProvider, type UseFormReturn } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ChevronLeft, ChevronRight, Loader2, Sparkles } from "lucide-react"
-import { createGig } from "@/actions/gigs"
+import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { StepIndicator } from "./StepIndicator"
 import { Step1Overview } from "./Step1Overview"
@@ -25,7 +25,8 @@ import {
 } from "@/schemas/client/gigs"
 import { GigLivePreview } from "./GigLivePreview"
 import { GigWizardProvider } from "./GigWizardContext"
-import type { CategoryWithChildren } from "@/actions/categories"
+import { apiClient } from "@/lib/client/axios"
+import type { CategoryWithChildren } from "@/types/categories"
 
 const TOTAL_STEPS = 5
 
@@ -45,7 +46,6 @@ export function GigCreateView({ categories = [] }: GigCreateViewProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [serverError, setServerError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
 
   const [basicsData,      setBasicsData]      = useState<GigBasicsData | null>(null)
   const [pricingData,     setPricingData]     = useState<GigPricingData | null>(null)
@@ -76,6 +76,17 @@ export function GigCreateView({ categories = [] }: GigCreateViewProps) {
     defaultValues: { coverImageUrl: "", galleryImages: [] },
   })
 
+  const publishMutation = useMutation({
+    mutationFn: (payload: { basics: GigBasicsData; pricing: GigPricingData; description: GigDescriptionData; gallery: GigGalleryData }) =>
+      apiClient.post<{ success: boolean; data: { gigId: string; slug: string } }>("/api/seller/gigs", payload),
+    onSuccess: () => {
+      router.push("/seller/gigs")
+    },
+    onError: () => {
+      setServerError("Something went wrong. Please try again.")
+    },
+  })
+
   async function handleNext() {
     if (currentStep === 1) {
       const valid = await basicsForm.trigger()
@@ -102,18 +113,11 @@ export function GigCreateView({ categories = [] }: GigCreateViewProps) {
   function handlePublish() {
     if (!basicsData || !pricingData || !descriptionData) return
     setServerError(null)
-    startTransition(async () => {
-      const result = await createGig({
-        basics:      basicsData,
-        pricing:     pricingData,
-        description: descriptionData,
-        gallery:     galleryForm.getValues(),
-      })
-      if (!result.success) {
-        setServerError(result.error ?? "Something went wrong. Please try again.")
-        return
-      }
-      router.push("/seller/gigs")
+    publishMutation.mutate({
+      basics:      basicsData,
+      pricing:     pricingData,
+      description: descriptionData,
+      gallery:     galleryForm.getValues(),
     })
   }
 
@@ -207,10 +211,10 @@ export function GigCreateView({ categories = [] }: GigCreateViewProps) {
                 <Button
                   type="button"
                   onClick={handlePublish}
-                  disabled={isPending || !basicsData || !pricingData || !descriptionData}
+                  disabled={publishMutation.isPending || !basicsData || !pricingData || !descriptionData}
                   className="gap-1.5 min-w-36"
                 >
-                  {isPending ? (
+                  {publishMutation.isPending ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Publishing…</>
                   ) : (
                     <><Sparkles className="h-4 w-4" /> Publish Gig</>

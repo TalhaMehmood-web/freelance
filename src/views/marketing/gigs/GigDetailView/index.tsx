@@ -98,7 +98,7 @@ export function GigDetailView({ gig }: { gig: GigDetail }) {
 
             {/* Package selector — mobile only */}
             <div className="lg:hidden">
-              <GigPackageSelector packages={gig.packages} />
+              <GigPackageSelector packages={gig.packages} gigId={gig.id} gigTitle={gig.title} />
             </div>
 
             {/* Tab navigation */}
@@ -135,7 +135,7 @@ export function GigDetailView({ gig }: { gig: GigDetail }) {
           {/* ── RIGHT COLUMN — sticky sidebar ─────────────────────────── */}
           <div className="hidden lg:block w-80 shrink-0">
             <div className="sticky top-6 space-y-4">
-              <GigPackageSelector packages={gig.packages} />
+              <GigPackageSelector packages={gig.packages} gigId={gig.id} gigTitle={gig.title} />
               <SellerSidebar seller={gig.seller} />
             </div>
           </div>

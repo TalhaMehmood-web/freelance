@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/shared/utils"
-import type { EarningsStats, LedgerRow } from "@/actions/seller/earnings"
+import type { EarningsStats, LedgerRow } from "@/types/seller"
 
 const TYPE_BADGE: Record<string, string> = {
   order_credit:    "bg-green-50 text-green-700 border-green-200",

@@ -1,7 +1,7 @@
 "use client"
 
-import { useTransition } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import Link from "next/link"
 import {
   ArrowLeft, Star, ShoppingBag, Package, BarChart2,
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import DImage from "@/components/ui/d-image"
 import { formatCurrency, formatNumber, formatRating, getInitials } from "@/lib/shared/utils"
-import { adminToggleGigStatus } from "@/actions/admin/gigs"
+import { apiClient } from "@/lib/client/axios"
 import { useUserDetailQuery } from "./hooks/useUserDetailQuery"
 
 const ROLE_BADGE: Record<string, string> = {
@@ -49,14 +49,16 @@ interface Props {
 export function UserDetailView({ userId }: Props) {
   const { data, isLoading, isError } = useUserDetailQuery(userId)
   const queryClient = useQueryClient()
-  const [, startTransition] = useTransition()
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ gigId, status }: { gigId: string; status: "active" | "paused" }) =>
+      apiClient.patch("/api/admin/gigs", { gigId, status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-user", userId] }),
+  })
 
   function handleToggle(gigId: string, currentStatus: string) {
     const next = currentStatus === "active" ? "paused" : "active"
-    startTransition(async () => {
-      await adminToggleGigStatus(gigId, next as "active" | "paused")
-      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] })
-    })
+    toggleMutation.mutate({ gigId, status: next as "active" | "paused" })
   }
 
   if (isLoading) {

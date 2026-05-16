@@ -1,9 +1,27 @@
-import { NextResponse } from "next/server"
-import { deleteAction } from "@/actions/admin/permissions"
+import { type NextRequest, NextResponse } from "next/server"
+import { requireApiAuth } from "@/lib/server/apiAuth"
+import { requireSuperAdmin } from "@/lib/server/permissions"
+import { UserRole } from "@/lib/shared/constants"
+import { prisma } from "@/lib/server/prisma"
 
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = prisma as any
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
+  const { session } = auth
+
+  try { await requireSuperAdmin(session) }
+  catch { return NextResponse.json({ error: "Super admin required." }, { status: 403 }) }
+
   const { id } = await params
-  const result = await deleteAction(id)
-  if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 })
+  const existing = await db.permissionAction.findUnique({ where: { id } })
+  if (!existing) return NextResponse.json({ error: "Action not found." }, { status: 404 })
+
+  await db.permissionAction.delete({ where: { id } })
   return NextResponse.json({ success: true })
 }

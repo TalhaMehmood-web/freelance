@@ -1,37 +1,40 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { ExternalLink, Trash2, Plus, Briefcase } from "lucide-react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
 import { AddPortfolioModal } from "./AddPortfolioModal"
-import { deletePortfolioItem } from "@/actions/seller/portfolio"
+import { apiClient } from "@/lib/client/axios"
 import { formatDate } from "@/lib/shared/utils"
-import type { PortfolioItem } from "@/actions/seller/portfolio"
+import type { PortfolioItem } from "@/types/portfolio"
 
 interface PortfolioViewProps {
   initialItems: PortfolioItem[]
 }
 
 export function SellerPortfolioView({ initialItems }: PortfolioViewProps) {
+  const queryClient = useQueryClient()
   const [items, setItems]               = useState(initialItems)
   const [addOpen, setAddOpen]           = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<PortfolioItem | null>(null)
-  const [isPending, startTransition]    = useTransition()
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/api/seller/portfolio/${id}`),
+    onSuccess: () => {
+      if (deleteTarget) {
+        setItems(prev => prev.filter(i => i.id !== deleteTarget.id))
+      }
+      setDeleteTarget(null)
+      queryClient.invalidateQueries({ queryKey: ["seller-portfolio"] })
+    },
+  })
 
   function handleAdded(item: PortfolioItem) {
     setItems(prev => [item, ...prev])
-  }
-
-  function handleDelete() {
-    if (!deleteTarget) return
-    startTransition(async () => {
-      await deletePortfolioItem(deleteTarget.id)
-      setItems(prev => prev.filter(i => i.id !== deleteTarget.id))
-      setDeleteTarget(null)
-    })
   }
 
   return (
@@ -120,16 +123,21 @@ export function SellerPortfolioView({ initialItems }: PortfolioViewProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)} disabled={isPending}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleteMutation.isPending}
+            >
               Cancel
             </Button>
             <Button
               variant="destructive"
               className="flex-1"
-              onClick={handleDelete}
-              disabled={isPending}
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              disabled={deleteMutation.isPending}
             >
-              {isPending ? "Deleting…" : "Delete"}
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </Button>
           </div>
         </DialogContent>

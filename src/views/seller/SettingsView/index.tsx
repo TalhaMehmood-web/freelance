@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProfileTab }       from "./ProfileTab"
 import { AvailabilityTab }  from "./AvailabilityTab"
 import { NotificationsTab } from "./NotificationsTab"
-import type { SellerSettingsData } from "@/actions/seller/settings"
+import type { SellerSettingsData } from "@/types/seller"
 
 export function SellerSettingsView({ settings }: { settings: SellerSettingsData }) {
   return (

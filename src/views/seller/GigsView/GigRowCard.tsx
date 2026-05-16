@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
   Edit2, Pause, Play, Trash2, MoreHorizontal, Star,
   Eye, MousePointerClick, ShoppingBag, ExternalLink, Megaphone,
 } from "lucide-react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -25,7 +26,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { cn, formatCurrency, formatNumber } from "@/lib/shared/utils"
-import { toggleGigStatus, deleteGig } from "@/actions/gigs"
+import { apiClient } from "@/lib/client/axios"
 import type { SellerGigRow, SellerGigStatus } from "@/types/gigs"
 
 interface GigRowCardProps {
@@ -54,28 +55,30 @@ function StatPill({ icon: Icon, value, label }: { icon: React.ElementType; value
 }
 
 export function GigRowCard({ gig, onStatusChange, onDelete }: GigRowCardProps) {
+  const queryClient = useQueryClient()
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [isPending, startTransition] = useTransition()
 
   const badge = STATUS_BADGE[gig.status]
 
-  function handleToggleStatus() {
-    const next = gig.status === "active" ? "paused" : "active"
-    startTransition(async () => {
-      const result = await toggleGigStatus(gig.id, next)
-      if (result.success) onStatusChange(gig.id, next)
-    })
-  }
+  const toggleMutation = useMutation({
+    mutationFn: (status: "active" | "paused") =>
+      apiClient.patch(`/api/seller/gigs/${gig.id}`, { status }),
+    onSuccess: (_, status) => {
+      onStatusChange(gig.id, status)
+      queryClient.invalidateQueries({ queryKey: ["seller-gigs"] })
+    },
+  })
 
-  function handleDelete() {
-    startTransition(async () => {
-      const result = await deleteGig(gig.id)
-      if (result.success) {
-        setDeleteOpen(false)
-        onDelete(gig.id)
-      }
-    })
-  }
+  const deleteMutation = useMutation({
+    mutationFn: () => apiClient.delete(`/api/seller/gigs/${gig.id}`),
+    onSuccess: () => {
+      setDeleteOpen(false)
+      onDelete(gig.id)
+      queryClient.invalidateQueries({ queryKey: ["seller-gigs"] })
+    },
+  })
+
+  const isPending = toggleMutation.isPending || deleteMutation.isPending
 
   return (
     <>
@@ -158,7 +161,7 @@ export function GigRowCard({ gig, onStatusChange, onDelete }: GigRowCardProps) {
                     "h-8 gap-1.5 text-xs",
                     gig.status === "paused" && "text-success-500 border-success-500 hover:bg-success-100"
                   )}
-                  onClick={handleToggleStatus}
+                  onClick={() => toggleMutation.mutate(gig.status === "active" ? "paused" : "active")}
                   disabled={isPending}
                 >
                   {gig.status === "active" ? (
@@ -229,11 +232,11 @@ export function GigRowCard({ gig, onStatusChange, onDelete }: GigRowCardProps) {
             </Button>
             <Button
               type="button"
-              onClick={handleDelete}
+              onClick={() => deleteMutation.mutate()}
               disabled={isPending}
               className="bg-danger-500 hover:bg-danger-500/90 text-white"
             >
-              {isPending ? "Deleting…" : "Delete gig"}
+              {deleteMutation.isPending ? "Deleting…" : "Delete gig"}
             </Button>
           </DialogFooter>
         </DialogContent>

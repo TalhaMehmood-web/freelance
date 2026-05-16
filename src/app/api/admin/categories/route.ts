@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/server/auth"
+import { requireApiAuth } from "@/lib/server/apiAuth"
 import { UserRole } from "@/lib/shared/constants"
 import { prisma } from "@/lib/server/prisma"
 import { CategoryFormSchema } from "@/schemas/admin/categories"
@@ -8,11 +8,8 @@ const VALID_SORT_COLS = ["name", "slug", "sortOrder", "createdAt"] as const
 type SortCol = typeof VALID_SORT_COLS[number]
 
 export async function GET(req: NextRequest) {
-  try {
-    await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
 
   const { searchParams } = new URL(req.url)
   const search  = searchParams.get("search")?.trim() ?? ""
@@ -56,11 +53,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
 
   const body = await req.json().catch(() => null)
   const parsed = CategoryFormSchema.safeParse(body)

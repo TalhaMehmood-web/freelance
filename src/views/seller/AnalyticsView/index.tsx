@@ -10,7 +10,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { formatCurrency, formatNumber } from "@/lib/shared/utils"
-import type { AnalyticsData, GigAnalyticsRow } from "@/actions/seller/analytics"
+import type { AnalyticsData, GigAnalyticsRow } from "@/types/seller"
 
 const RANGE_TABS = [
   { label: "Last 7 days",  value: "7" },

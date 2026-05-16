@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/server/auth"
+import { requireApiAuth } from "@/lib/server/apiAuth"
 import { UserRole } from "@/lib/shared/constants"
 import { prisma } from "@/lib/server/prisma"
 import { CategoryUpdateSchema } from "@/schemas/admin/categories"
@@ -12,11 +12,8 @@ const VALID_CHILD_SORT = ["name", "slug", "sortOrder", "createdAt"] as const
 type ChildSortCol = typeof VALID_CHILD_SORT[number]
 
 export async function GET(req: NextRequest, { params }: RouteParams) {
-  try {
-    await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
 
   const { id } = await params
   const { searchParams } = new URL(req.url)
@@ -63,11 +60,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
-  try {
-    await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
 
   const { id } = await params
   const body = await req.json().catch(() => null)
@@ -100,12 +94,9 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   return NextResponse.json({ data: category })
 }
 
-export async function DELETE(_req: NextRequest, { params }: RouteParams) {
-  try {
-    await requireAuth(UserRole.Admin)
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  const auth = await requireApiAuth(req, UserRole.Admin)
+  if (!auth.ok) return auth.response
 
   const { id } = await params
 

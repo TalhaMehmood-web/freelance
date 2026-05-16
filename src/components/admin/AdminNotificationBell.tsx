@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import axios from "axios"
+import { apiClient as axios } from "@/lib/client/axios"
 import { Bell, CheckCheck } from "lucide-react"
 import { toast } from "sonner"
-import { createSupabaseBrowserClient } from "@/lib/client/supabase"
-import type { RealtimeChannel } from "@supabase/supabase-js"
+import { createSupabaseBrowserClient, createAuthenticatedRealtimeClient } from "@/lib/client/supabase"
+import type { RealtimeChannel, RealtimePostgresInsertPayload } from "@supabase/supabase-js"
 
 interface NotificationItem {
   id:        string
@@ -52,53 +52,61 @@ export function AdminNotificationBell({ userId }: { userId: string }) {
 
   /* ── Realtime subscription — userId comes from server, always defined ── */
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient()
+    const anonClient = createSupabaseBrowserClient()
 
-    const channel = supabase
-      .channel(`admin-notifications:${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event:  "INSERT",
-          schema: "public",
-          table:  "notifications",
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const row = payload.new as NotificationItem
+    anonClient.auth.getSession().then((result: { data: { session: { access_token: string } | null } }) => {
+      const token = result.data?.session?.access_token ?? ""
+      const supabase = token ? createAuthenticatedRealtimeClient(token) : anonClient
 
-          queryClient.setQueryData<NotificationsResponse>(
-            ["admin-notifications"],
-            (old) => old
-              ? { data: [row, ...old.data], unreadCount: old.unreadCount + 1 }
-              : old,
-          )
+      const channel = supabase
+        .channel(`admin-notifications:${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event:  "INSERT",
+            schema: "public",
+            table:  "notifications",
+          },
+          (payload: RealtimePostgresInsertPayload<Record<string, unknown>>) => {
+            if ((payload.new as Record<string, unknown>).user_id !== userId) return
+            if ((payload as unknown as { errors?: string[] }).errors?.length) return
+            const row = payload.new as unknown as NotificationItem
 
-          toast(row.title, {
-            description: row.body,
-            duration:    8000,
-            action: {
-              label:   "View",
-              onClick: () => {
-                const slug  = row.data?.slug  as string | undefined
-                const gigId = row.data?.gigId as string | undefined
-                if (slug)       router.push(`/gigs/${slug}`)
-                else if (gigId) router.push(`/admin/gigs`)
-                else            router.push(`/admin/dashboard`)
+            queryClient.setQueryData<NotificationsResponse>(
+              ["admin-notifications"],
+              (old) => old
+                ? { data: [row, ...old.data], unreadCount: old.unreadCount + 1 }
+                : old,
+            )
+
+            toast(row.title, {
+              description: row.body,
+              duration:    8000,
+              action: {
+                label:   "View",
+                onClick: () => {
+                  const slug  = row.data?.slug  as string | undefined
+                  const gigId = row.data?.gigId as string | undefined
+                  if (slug)       router.push(`/gigs/${slug}`)
+                  else if (gigId) router.push(`/admin/gigs`)
+                  else            router.push(`/admin/dashboard`)
+                },
               },
-            },
-          })
-        },
-      )
-      .subscribe((status) => {
-        console.log("[Realtime] notifications status:", status)
-      })
+            })
+          },
+        )
+        .subscribe((status: string) => {
+          console.log("[Realtime] notifications status:", status)
+        })
 
-    channelRef.current = channel
+      channelRef.current = channel
+    })
 
     return () => {
-      supabase.removeChannel(channel)
-      channelRef.current = null
+      if (channelRef.current) {
+        anonClient.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [userId, queryClient, router])
 

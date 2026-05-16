@@ -1,0 +1,3 @@
+import type { Category } from "@prisma/client"
+
+export type CategoryWithChildren = Category & { children: Category[] }

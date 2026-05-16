@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/shared/utils";
 import type { GigFilters } from "./types";
-import type { CategoryWithChildren } from "@/actions/categories";
+import type { CategoryWithChildren } from "@/types/categories";
 
 const DELIVERY_OPTIONS = [
   { label: "Any", value: "" },

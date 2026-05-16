@@ -1,7 +1,7 @@
 "use client"
 
 import { type ColumnDef } from "@tanstack/react-table"
-import { Lock, MoreVertical, Trash2 } from "lucide-react"
+import { MoreVertical, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -83,23 +83,6 @@ export function buildPermissionColumns({
         <span className="text-xs text-text-tertiary">{getValue() as string}</span>
       ),
     },
-    {
-      accessorKey: "isBuiltIn",
-      header: () => (
-        <span className="font-medium text-text-secondary text-xs uppercase tracking-wide">Type</span>
-      ),
-      cell: ({ getValue }) =>
-        getValue() ? (
-          <Badge variant="outline" className="text-xs bg-surface-subtle text-text-tertiary border-border gap-1">
-            <Lock className="w-3 h-3" />
-            Built-in
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="text-xs bg-brand-50 text-brand-700 border-brand-200">
-            Custom
-          </Badge>
-        ),
-    },
     ...(isSuperAdmin ? [{
       id: "actions",
       header: () => (
@@ -118,16 +101,11 @@ export function buildPermissionColumns({
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem
                   nativeButton
-                  className={`flex items-center gap-2 cursor-pointer ${
-                    p.isBuiltIn
-                      ? "opacity-50 cursor-not-allowed"
-                      : "text-danger-600 focus:text-danger-700 focus:bg-danger-50"
-                  }`}
-                  disabled={p.isBuiltIn}
-                  onClick={() => !p.isBuiltIn && onDelete(p)}
+                  className="flex items-center gap-2 cursor-pointer text-danger-600 focus:text-danger-700 focus:bg-danger-50"
+                  onClick={() => onDelete(p)}
                 >
                   <Trash2 className="w-4 h-4" />
-                  {p.isBuiltIn ? "Cannot delete" : "Delete"}
+                  Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

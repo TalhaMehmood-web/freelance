@@ -4,7 +4,7 @@ import { useState, useTransition } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
+import { apiClient as axios } from "@/lib/client/axios"
 import {
   LayoutDashboard, Package, ShoppingBag, ShieldOff, ShieldCheck,
   Shield, ArrowLeft,
