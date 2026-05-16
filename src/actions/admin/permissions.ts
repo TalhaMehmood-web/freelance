@@ -104,10 +104,10 @@ export async function deletePermission(id: string): Promise<ActionResult> {
     select: { id: true, permissions: true },
   })
   await Promise.all(
-    rolesWithPerm.map(r =>
+    rolesWithPerm.map((r: (typeof rolesWithPerm)[number]) =>
       prisma.role.update({
         where: { id: r.id },
-        data:  { permissions: r.permissions.filter(p => p !== existing.key) },
+        data:  { permissions: r.permissions.filter((p: string) => p !== existing.key) },
       })
     )
   )

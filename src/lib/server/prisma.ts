@@ -31,6 +31,6 @@ export function getPrisma(): PrismaClient {
 // Convenience re-export — most callers use this
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop) {
-    return (getPrisma() as unknown as Record<string | symbol, unknown>)[prop]
+    return (getPrisma() as unknown as PrismaClient)[prop as keyof PrismaClient]
   },
 })
