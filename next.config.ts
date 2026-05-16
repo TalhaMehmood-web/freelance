@@ -1,9 +1,9 @@
-import type { NextConfig } from "next"
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* Enable Next.js 16 Cache Components ('use cache' directive) */
   cacheComponents: true,
-
+  output: "standalone",
   images: {
     /* Supabase Storage bucket */
     remotePatterns: [
@@ -44,8 +44,8 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-    ]
+    ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;
