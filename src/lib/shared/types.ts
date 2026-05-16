@@ -1,11 +1,12 @@
-import type { UserRole, OrgMemberRole, PlanTier, SellerLevel, AvailabilityStatus } from "./constants"
+import type { UserRole, ActiveRole, OrgMemberRole, PlanTier, SellerLevel, AvailabilityStatus } from "./constants"
 
 /* Server session resolved per request */
 export interface Session {
   userId: string
   email: string
   grantedRoles: UserRole[]
-  activeRole: "buyer" | "seller"
+  activeRole: ActiveRole
+  isSuperAdmin: boolean
   orgId: string | null
   orgRole: OrgMemberRole | null
   orgPlan: PlanTier | null

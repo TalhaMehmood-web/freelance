@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import { getOrders, getOrderStatusCounts } from "@/actions/seller/orders"
 import { SellerOrdersView } from "@/views/seller/OrdersView"
 
@@ -17,7 +18,7 @@ export default async function SellerOrdersPage({
     sortDir?: string
   }>
 }) {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   const { status, search, page: pageParam, sortBy, sortDir } = await searchParams
 
   const page    = Math.max(1, parseInt(pageParam ?? "1", 10) || 1)

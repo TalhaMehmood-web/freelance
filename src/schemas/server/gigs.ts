@@ -3,6 +3,7 @@ import { z } from "zod"
 export const GigSearchParamsSchema = z.object({
   q:            z.string().max(200).optional().default(""),
   category:     z.string().max(100).optional().default(""),
+  subcategory:  z.string().max(100).optional().default(""),
   minPrice:     z.coerce.number().min(0).max(100_000).optional().transform(v => v?.toString() ?? ""),
   maxPrice:     z.coerce.number().min(0).max(100_000).optional().transform(v => v?.toString() ?? ""),
   deliveryDays: z.enum(["", "1", "3", "7", "14"]).optional().default(""),

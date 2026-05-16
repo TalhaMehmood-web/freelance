@@ -6,6 +6,7 @@ export interface GigCard {
   slug: string
   title: string
   coverImageUrl: string | null
+  images: { id: string; imageUrl: string }[]
   startingPriceCents: number
   avgRating: number
   reviewCount: number

@@ -1,53 +1,68 @@
 "use client"
 
-import { useFormContext, useWatch, type UseFormReturn } from "react-hook-form"
-import { Eye, Tag, Package, AlignLeft, CheckCircle2, Clock } from "lucide-react"
+import { useWatch, type UseFormReturn } from "react-hook-form"
+import { Eye, Tag, Package, AlignLeft, CheckCircle2, Clock, ImageIcon } from "lucide-react"
 import { formatCurrency } from "@/lib/shared/utils"
-import type { GigBasicsData, GigPricingData, GigDescriptionData } from "@/schemas/client/gigs"
-
-const CATEGORIES: Record<string, string> = {
-  cat_dev:     "Development & IT",
-  cat_design:  "Design & Creative",
-  cat_video:   "Video & Animation",
-  cat_writing: "Writing & Translation",
-  cat_mktg:    "Digital Marketing",
-  cat_data:    "Data & Analytics",
-  cat_music:   "Music & Audio",
-  cat_biz:     "Business",
-  cat_ai:      "AI Services",
-}
+import type { GigBasicsData, GigPricingData, GigDescriptionData, GigGalleryData } from "@/schemas/client/gigs"
+import { useGigWizard } from "./GigWizardContext"
+import DImage from "@/components/ui/d-image"
 
 interface GigLivePreviewProps {
   currentStep:     number
   basicsForm:      UseFormReturn<GigBasicsData>
   pricingForm:     UseFormReturn<GigPricingData>
   descriptionForm: UseFormReturn<GigDescriptionData>
+  galleryForm:     UseFormReturn<GigGalleryData>
 }
 
-function BasicsPreview({ form }: { form: UseFormReturn<GigBasicsData> }) {
-  const title      = useWatch({ control: form.control, name: "title" })
-  const categoryId = useWatch({ control: form.control, name: "categoryId" })
-  const tags       = useWatch({ control: form.control, name: "searchTags" }) ?? []
+function CoverImage({ galleryForm, basicsForm }: {
+  galleryForm: UseFormReturn<GigGalleryData>
+  basicsForm:  UseFormReturn<GigBasicsData>
+}) {
+  const coverUrl = useWatch({ control: galleryForm.control, name: "coverImageUrl" }) ?? ""
+  const title    = useWatch({ control: basicsForm.control, name: "title" }) ?? ""
+
+  if (coverUrl) {
+    return (
+      <div className="aspect-video w-full rounded-xl overflow-hidden mb-4 relative">
+        <DImage src={coverUrl} alt={title || "Cover"} fill skipTransform className="absolute inset-0" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="aspect-video w-full rounded-xl bg-linear-to-br from-brand-50 via-brand-100 to-blue-50 flex items-center justify-center mb-4">
+      <div className="text-center px-4">
+        <div className="w-10 h-10 rounded-xl bg-white/60 flex items-center justify-center mx-auto mb-2">
+          <Eye className="w-5 h-5 text-brand-400" />
+        </div>
+        <p className="text-xs text-brand-400">Cover image</p>
+      </div>
+    </div>
+  )
+}
+
+function BasicsPreview({ basicsForm, galleryForm }: {
+  basicsForm:  UseFormReturn<GigBasicsData>
+  galleryForm: UseFormReturn<GigGalleryData>
+}) {
+  const title      = useWatch({ control: basicsForm.control, name: "title" })
+  const categoryId = useWatch({ control: basicsForm.control, name: "categoryId" })
+  const tags       = useWatch({ control: basicsForm.control, name: "searchTags" }) ?? []
+  const { categories } = useGigWizard()
+  const categoryName = categoryId ? categories.find(c => c.id === categoryId)?.name ?? categoryId : null
 
   return (
     <>
-      <div className="aspect-[16/9] w-full rounded-xl bg-linear-to-br from-brand-50 via-brand-100 to-blue-50 flex items-center justify-center mb-4">
-        <div className="text-center px-4">
-          <div className="w-10 h-10 rounded-xl bg-white/60 flex items-center justify-center mx-auto mb-2">
-            <Eye className="w-5 h-5 text-brand-400" />
-          </div>
-          <p className="text-xs text-brand-400">Cover image</p>
-        </div>
-      </div>
-
+      <CoverImage galleryForm={galleryForm} basicsForm={basicsForm} />
       <div className="space-y-2">
         <p className="text-sm font-semibold text-text-primary leading-snug line-clamp-2">
           {title || <span className="text-text-tertiary italic">Your gig title will appear here…</span>}
         </p>
-        {categoryId && (
+        {categoryName && (
           <span className="inline-flex items-center gap-1 text-xs bg-brand-50 text-brand-700 border border-brand-100 px-2 py-0.5 rounded-full">
             <Tag className="w-3 h-3" />
-            {CATEGORIES[categoryId] ?? categoryId}
+            {categoryName}
           </span>
         )}
         {tags.length > 0 && (
@@ -151,19 +166,54 @@ function DescriptionPreview({ form }: { form: UseFormReturn<GigDescriptionData> 
   )
 }
 
+function GalleryPreview({ galleryForm, basicsForm }: {
+  galleryForm: UseFormReturn<GigGalleryData>
+  basicsForm:  UseFormReturn<GigBasicsData>
+}) {
+  const coverUrl    = useWatch({ control: galleryForm.control, name: "coverImageUrl" }) ?? ""
+  const galleryUrls = useWatch({ control: galleryForm.control, name: "galleryImages" }) ?? []
+  const title       = useWatch({ control: basicsForm.control, name: "title" }) ?? ""
+
+  return (
+    <div className="space-y-3">
+      {coverUrl ? (
+        <div className="aspect-video w-full rounded-xl overflow-hidden relative">
+          <DImage src={coverUrl} alt={title || "Cover"} fill skipTransform className="absolute inset-0" />
+        </div>
+      ) : (
+        <div className="aspect-video w-full rounded-xl bg-linear-to-br from-brand-50 via-brand-100 to-blue-50 flex items-center justify-center">
+          <div className="text-center">
+            <ImageIcon className="w-7 h-7 text-brand-300 mx-auto mb-1" />
+            <p className="text-xs text-brand-400">No cover image yet</p>
+          </div>
+        </div>
+      )}
+      {galleryUrls.filter(Boolean).length > 0 && (
+        <div className="grid grid-cols-3 gap-1.5">
+          {galleryUrls.filter(Boolean).map((url, i) => (
+            <div key={i} className="aspect-[4/3] rounded-lg overflow-hidden relative">
+              <DImage src={url} alt={`Gallery ${i + 1}`} fill skipTransform className="absolute inset-0" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CompletionChecklist({
   basicsForm, pricingForm, descriptionForm,
 }: {
-  basicsForm: UseFormReturn<GigBasicsData>
-  pricingForm: UseFormReturn<GigPricingData>
+  basicsForm:      UseFormReturn<GigBasicsData>
+  pricingForm:     UseFormReturn<GigPricingData>
   descriptionForm: UseFormReturn<GigDescriptionData>
 }) {
-  const title      = useWatch({ control: basicsForm.control, name: "title" }) ?? ""
-  const categoryId = useWatch({ control: basicsForm.control, name: "categoryId" }) ?? ""
-  const tags       = useWatch({ control: basicsForm.control, name: "searchTags" }) ?? []
-  const basic      = useWatch({ control: pricingForm.control, name: "basic" })
-  const standard   = useWatch({ control: pricingForm.control, name: "standard" })
-  const premium    = useWatch({ control: pricingForm.control, name: "premium" })
+  const title       = useWatch({ control: basicsForm.control,      name: "title" })       ?? ""
+  const categoryId  = useWatch({ control: basicsForm.control,      name: "categoryId" })  ?? ""
+  const tags        = useWatch({ control: basicsForm.control,      name: "searchTags" })  ?? []
+  const basic       = useWatch({ control: pricingForm.control,     name: "basic" })
+  const standard    = useWatch({ control: pricingForm.control,     name: "standard" })
+  const premium     = useWatch({ control: pricingForm.control,     name: "premium" })
   const description = useWatch({ control: descriptionForm.control, name: "description" }) ?? ""
 
   const checks = [
@@ -199,33 +249,24 @@ function CompletionChecklist({
 }
 
 export function GigLivePreview({
-  currentStep, basicsForm, pricingForm, descriptionForm,
+  currentStep, basicsForm, pricingForm, descriptionForm, galleryForm,
 }: GigLivePreviewProps) {
   return (
     <div className="flex flex-col gap-4">
-      {/* Card preview */}
       <div className="bg-surface rounded-2xl border border-border shadow-card overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-surface-subtle">
           <Eye className="w-3.5 h-3.5 text-text-tertiary" />
           <span className="text-xs font-medium text-text-secondary">Live Preview</span>
         </div>
         <div className="p-4">
-          {currentStep === 1 && <BasicsPreview form={basicsForm} />}
+          {currentStep === 1 && <BasicsPreview basicsForm={basicsForm} galleryForm={galleryForm} />}
           {currentStep === 2 && <PricingPreview form={pricingForm} />}
           {currentStep === 3 && <DescriptionPreview form={descriptionForm} />}
-          {currentStep === 4 && (
-            <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center">
-                <Eye className="w-5 h-5 text-brand-400" />
-              </div>
-              <p className="text-xs text-text-tertiary">Gallery preview available after upload</p>
-            </div>
-          )}
-          {currentStep === 5 && <BasicsPreview form={basicsForm} />}
+          {currentStep === 4 && <GalleryPreview galleryForm={galleryForm} basicsForm={basicsForm} />}
+          {currentStep === 5 && <BasicsPreview basicsForm={basicsForm} galleryForm={galleryForm} />}
         </div>
       </div>
 
-      {/* Completion checklist */}
       <div className="bg-surface rounded-2xl border border-border shadow-card p-4">
         <CompletionChecklist
           basicsForm={basicsForm}

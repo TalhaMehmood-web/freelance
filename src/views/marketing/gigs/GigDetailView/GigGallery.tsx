@@ -1,36 +1,44 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import Image from "next/image"
-import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react"
+import { Maximize2, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel"
+import { useEffect } from "react"
 import { cn } from "@/lib/shared/utils"
+import DImage from "@/components/ui/d-image"
 import type { GigImage } from "@/types/gigs"
 
 interface GigGalleryProps {
   images: GigImage[]
-  title: string
+  title:  string
 }
 
 export function GigGallery({ images, title }: GigGalleryProps) {
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [activeIndex,  setActiveIndex]  = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [api,          setApi]          = useState<CarouselApi>()
 
-  const goToPrev = useCallback(
-    () => setActiveIndex((i) => (i - 1 + images.length) % images.length),
-    [images.length]
-  )
-  const goToNext = useCallback(
-    () => setActiveIndex((i) => (i + 1) % images.length),
-    [images.length]
-  )
+  useEffect(() => {
+    if (!api) return
+    api.on("select", () => setActiveIndex(api.selectedScrollSnap()))
+  }, [api])
 
+  const scrollTo = useCallback((i: number) => api?.scrollTo(i), [api])
+
+  /* ── Empty state ── */
   if (images.length === 0) {
     return (
-      <div className="rounded-2xl overflow-hidden border border-border">
-        <div className="relative aspect-[16/10] bg-linear-to-br from-brand-50 to-brand-100 flex items-center justify-center">
-          <span className="text-brand-300 text-6xl font-bold select-none">
+      <div className="rounded-2xl overflow-hidden border border-border shadow-card">
+        <div className="relative aspect-video bg-linear-to-br from-brand-50 to-brand-100 flex items-center justify-center">
+          <span className="text-brand-200 text-7xl font-black select-none">
             {title.charAt(0).toUpperCase()}
           </span>
         </div>
@@ -40,74 +48,72 @@ export function GigGallery({ images, title }: GigGalleryProps) {
 
   return (
     <>
-      <div className="rounded-2xl overflow-hidden border border-border bg-surface-muted">
-        {/* Main image */}
-        <div
-          className="relative aspect-[16/10] cursor-zoom-in select-none"
-          onClick={() => setLightboxOpen(true)}
-        >
-          <Image
-            src={images[activeIndex].imageUrl}
-            alt={`${title} — image ${activeIndex + 1}`}
-            fill
-            className="object-cover"
-            sizes="(max-width: 1024px) 100vw, 60vw"
-            priority
-          />
+      <div className="rounded-2xl overflow-hidden border border-border shadow-card bg-surface-muted">
+
+        {/* Main carousel */}
+        <Carousel setApi={setApi} opts={{ loop: true }} className="relative">
+          <CarouselContent>
+            {images.map((img, i) => (
+              <CarouselItem key={img.id}>
+                <div
+                  className="relative aspect-video cursor-zoom-in"
+                  onClick={() => setLightboxOpen(true)}
+                >
+                  <DImage
+                    src={img.imageUrl}
+                    alt={`${title} — image ${i + 1}`}
+                    fill
+                    skipTransform
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
 
           {images.length > 1 && (
             <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={(e) => { e.stopPropagation(); goToPrev() }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-surface/80 backdrop-blur-sm shadow-card hover:bg-surface transition-colors h-auto w-auto"
-                aria-label="Previous image"
-              >
-                <ChevronLeft className="h-5 w-5 text-text-primary" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={(e) => { e.stopPropagation(); goToNext() }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-surface/80 backdrop-blur-sm shadow-card hover:bg-surface transition-colors h-auto w-auto"
-                aria-label="Next image"
-              >
-                <ChevronRight className="h-5 w-5 text-text-primary" />
-              </Button>
-
-              <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-white bg-black/40 backdrop-blur-sm px-2.5 py-0.5 rounded-full pointer-events-none">
-                {activeIndex + 1} / {images.length}
-              </span>
+              <CarouselPrevious className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 bg-surface/80 backdrop-blur-sm border-border hover:bg-surface shadow-card" />
+              <CarouselNext className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 bg-surface/80 backdrop-blur-sm border-border hover:bg-surface shadow-card" />
             </>
           )}
 
-          <div className="absolute bottom-3 right-3 p-1.5 rounded-lg bg-surface/70 backdrop-blur-sm pointer-events-none">
-            <Maximize2 className="h-4 w-4 text-text-secondary" />
+          {/* Counter + expand */}
+          <div className="absolute bottom-3 left-3 flex items-center gap-2 pointer-events-none">
+            {images.length > 1 && (
+              <span className="text-xs text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full font-medium">
+                {activeIndex + 1} / {images.length}
+              </span>
+            )}
           </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="absolute bottom-3 right-3 p-1.5 rounded-lg bg-surface/70 backdrop-blur-sm border border-border hover:bg-surface transition-colors shadow-sm"
+            aria-label="Expand gallery"
+          >
+            <Maximize2 className="h-4 w-4 text-text-secondary" />
+          </button>
+        </Carousel>
 
         {/* Thumbnail strip */}
         {images.length > 1 && (
-          <div className="flex gap-2 p-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 p-3 overflow-x-auto scrollbar-none bg-surface-subtle border-t border-border">
             {images.map((img, i) => (
-              <Button
+              <button
                 key={img.id}
                 type="button"
-                variant="ghost"
-                onClick={() => setActiveIndex(i)}
+                onClick={() => scrollTo(i)}
                 className={cn(
-                  "relative flex-none w-16 h-12 rounded-lg overflow-hidden border-2 transition-all p-0",
+                  "relative flex-none w-16 h-12 rounded-lg overflow-hidden border-2 transition-all",
                   i === activeIndex
-                    ? "border-brand-500 ring-2 ring-brand-200"
-                    : "border-transparent hover:border-border hover:bg-transparent"
+                    ? "border-brand-500 ring-2 ring-brand-200/60 shadow-sm"
+                    : "border-transparent hover:border-border opacity-70 hover:opacity-100",
                 )}
                 aria-label={`View image ${i + 1}`}
               >
-                <Image src={img.imageUrl} alt="" fill className="object-cover" sizes="64px" />
-              </Button>
+                <DImage src={img.imageUrl} alt="" fill skipTransform className="absolute inset-0 w-full h-full object-cover" />
+              </button>
             ))}
           </div>
         )}
@@ -115,54 +121,45 @@ export function GigGallery({ images, title }: GigGalleryProps) {
 
       {/* Lightbox */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent
-          className="max-w-5xl w-full bg-black/95 border-none p-4"
-          showCloseButton={false}
-        >
-          <Button
+        <DialogContent className="max-w-5xl w-full bg-black/95 border-none p-4" showCloseButton={false}>
+          <button
             type="button"
-            variant="ghost"
-            size="icon-sm"
             onClick={() => setLightboxOpen(false)}
-            className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors h-auto w-auto"
-            aria-label="Close lightbox"
+            className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            aria-label="Close"
           >
             <X className="h-5 w-5 text-white" />
-          </Button>
+          </button>
 
-          <div className="relative aspect-[16/10]">
-            <Image
+          <div className="relative aspect-video">
+            <DImage
               src={images[activeIndex]?.imageUrl ?? ""}
               alt={`${title} — image ${activeIndex + 1}`}
               fill
-              className="object-contain"
-              sizes="90vw"
+              skipTransform
+              className="absolute inset-0 w-full h-full object-contain"
             />
           </div>
 
           {images.length > 1 && (
             <>
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={goToPrev}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors h-auto w-auto"
-                aria-label="Previous image"
+                onClick={() => { scrollTo((activeIndex - 1 + images.length) % images.length); setActiveIndex(i => (i - 1 + images.length) % images.length) }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                aria-label="Previous"
               >
-                <ChevronLeft className="h-6 w-6 text-white" />
-              </Button>
-              <Button
+                <ChevronLeft className="h-5 w-5 text-white" />
+              </button>
+              <button
                 type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={goToNext}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors h-auto w-auto"
-                aria-label="Next image"
+                onClick={() => { scrollTo((activeIndex + 1) % images.length); setActiveIndex(i => (i + 1) % images.length) }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                aria-label="Next"
               >
-                <ChevronRight className="h-6 w-6 text-white" />
-              </Button>
-              <span className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/70">
+                <ChevronRight className="h-5 w-5 text-white" />
+              </button>
+              <span className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/60">
                 {activeIndex + 1} / {images.length}
               </span>
             </>

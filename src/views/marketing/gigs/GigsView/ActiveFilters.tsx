@@ -4,6 +4,7 @@ import { X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { GigFilters } from "./types"
+import type { CategoryWithChildren } from "@/actions/categories"
 
 const DELIVERY_OPTIONS = [
   { label: "Any",       value: "" },
@@ -23,7 +24,7 @@ const SELLER_LEVELS = [
 
 interface ActiveFiltersProps {
   filters: GigFilters
-  categories: { name: string; slug: string }[]
+  categories: CategoryWithChildren[]
   onRemove: (key: keyof GigFilters) => void
 }
 
@@ -33,6 +34,11 @@ export function ActiveFilters({ filters, categories, onRemove }: ActiveFiltersPr
   if (filters.category) {
     const cat = categories.find((c) => c.slug === filters.category)
     if (cat) pills.push({ key: "category", label: cat.name })
+  }
+  if (filters.subcategory) {
+    const cat = categories.find((c) => c.slug === filters.category)
+    const sub = cat?.children.find((c) => c.slug === filters.subcategory)
+    if (sub) pills.push({ key: "subcategory", label: sub.name })
   }
   if (filters.minPrice || filters.maxPrice) {
     const label = filters.minPrice && filters.maxPrice

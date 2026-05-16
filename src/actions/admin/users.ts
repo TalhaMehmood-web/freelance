@@ -1,100 +1,159 @@
 "use server"
 
 import { requireAuth } from "@/lib/server/auth"
-import { hasPermission } from "@/lib/server/permissions"
+import { hasPermission, requireSuperAdmin } from "@/lib/server/permissions"
+import { prisma } from "@/lib/server/prisma"
+import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
 import type { AdminUserRow } from "@/types/admin"
 
 export interface GetUsersQuery {
-  search?:  string
-  role?:    string
-  page?:    number
+  search?:   string
+  role?:     string
+  page?:     number
   pageSize?: number
-  sortBy?:  "fullName" | "username" | "createdAt"
-  sortDir?: "asc" | "desc"
+  sortBy?:   "fullName" | "username" | "createdAt"
+  sortDir?:  "asc" | "desc"
 }
 
 const PAGE_SIZE = 20
 
-// MOCK Phase 2 — replace with prisma.profile.findMany + supabase admin.listUsers in Phase 3
-const MOCK_USERS: AdminUserRow[] = [
-  {
-    id: "profile_1", userId: "user_1", username: "john_doe",
-    fullName: "John Doe", avatarUrl: null, email: "john@example.com",
-    roles: ["buyer", "seller"], createdAt: "2025-01-10T10:00:00Z", sellerLevel: "level_1",
-  },
-  {
-    id: "profile_2", userId: "user_2", username: "jane_smith",
-    fullName: "Jane Smith", avatarUrl: null, email: "jane@example.com",
-    roles: ["buyer"], createdAt: "2025-02-14T08:30:00Z", sellerLevel: null,
-  },
-  {
-    id: "profile_3", userId: "user_3", username: "admin_talha",
-    fullName: "Talha Admin", avatarUrl: null, email: "admin@freelancehub.com",
-    roles: ["buyer", "seller", "admin"], createdAt: "2025-01-01T00:00:00Z", sellerLevel: "top_rated",
-  },
-]
-
 export async function getUsers(
   query: GetUsersQuery = {}
 ): Promise<ActionResult<{ users: AdminUserRow[]; total: number; pageCount: number }>> {
-  const session = await requireAuth("admin")
-  if (!(await hasPermission(session, "manage_users"))) {
+  const session = await requireAuth(UserRole.Admin)
+  if (!(await hasPermission(session, "users:read"))) {
     return { success: false, error: "You do not have permission to manage users." }
   }
 
   const { search, role, page = 1, pageSize = PAGE_SIZE, sortBy = "createdAt", sortDir = "desc" } = query
 
-  let filtered = [...MOCK_USERS]
-
-  if (search) {
-    const q = search.toLowerCase()
-    filtered = filtered.filter(u =>
-      u.fullName.toLowerCase().includes(q) ||
-      u.username.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q)
-    )
-  }
-  if (role) {
-    filtered = filtered.filter(u => u.roles.includes(role))
+  type ProfileWhere = NonNullable<Parameters<typeof prisma.profile.findMany>[0]>["where"]
+  const where: ProfileWhere = {
+    ...(search && {
+      OR: [
+        { fullName: { contains: search, mode: "insensitive" } },
+        { username:  { contains: search, mode: "insensitive" } },
+      ],
+    }),
+    ...(role && { roles: { has: role } }),
   }
 
-  filtered.sort((a, b) => {
-    const av = a[sortBy as keyof AdminUserRow] as string ?? ""
-    const bv = b[sortBy as keyof AdminUserRow] as string ?? ""
-    return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av)
-  })
+  const orderBy = sortBy === "fullName"
+    ? { fullName: sortDir as "asc" | "desc" }
+    : sortBy === "username"
+    ? { username: sortDir as "asc" | "desc" }
+    : { createdAt: sortDir as "asc" | "desc" }
 
-  const total     = filtered.length
-  const pageCount = Math.max(1, Math.ceil(total / pageSize))
-  const users     = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const [profiles, total] = await Promise.all([
+    prisma.profile.findMany({
+      where,
+      include: { sellerProfile: { select: { sellerLevel: true } } },
+      orderBy,
+      skip:  (page - 1) * pageSize,
+      take:  pageSize,
+    }),
+    prisma.profile.count({ where }),
+  ])
 
-  return { success: true, data: { users, total, pageCount } }
+  const users: AdminUserRow[] = profiles.map(p => ({
+    id:           p.id,
+    userId:       p.userId,
+    username:     p.username,
+    fullName:     p.fullName,
+    avatarUrl:    p.avatarUrl ?? null,
+    email:        "",  // Profile model has no email — stored in Supabase Auth
+    roles:        p.roles,
+    createdAt:    p.createdAt.toISOString(),
+    sellerLevel:  p.sellerProfile?.sellerLevel ?? null,
+    isBlocked:    (p as any).isBlocked  ?? false,
+    blockedAt:    (p as any).blockedAt  ? (p as any).blockedAt.toISOString() : null,
+    lastSignInAt: null,
+  }))
+
+  return {
+    success: true,
+    data: {
+      users,
+      total,
+      pageCount: Math.max(1, Math.ceil(total / pageSize)),
+    },
+  }
 }
 
-// MOCK Phase 2 — replace with prisma.profile.update({ where: { userId }, data: { roles: { push: role } } })
 export async function assignRole(
   targetUserId: string,
-  role: "buyer" | "seller" | "admin"
+  roleSlug: string,
 ): Promise<ActionResult<null>> {
-  const session = await requireAuth("admin")
-  if (!(await hasPermission(session, "manage_users"))) {
-    return { success: false, error: "You do not have permission to manage users." }
-  }
+  const session = await requireAuth(UserRole.Admin)
+  await requireSuperAdmin(session)
+
+  const roleExists = await prisma.role.findUnique({ where: { slug: roleSlug } })
+  if (!roleExists) return { success: false, error: `Role "${roleSlug}" does not exist.` }
+
+  const profile = await prisma.profile.findUnique({ where: { userId: targetUserId } })
+  if (!profile) return { success: false, error: "User not found." }
+
+  if (profile.roles.includes(roleSlug)) return { success: true, data: null }
+
+  await prisma.profile.update({
+    where: { userId: targetUserId },
+    data:  { roles: { push: roleSlug } },
+  })
+
   return { success: true, data: null }
 }
 
-// MOCK Phase 2 — replace with prisma.profile.update + filter out role from array
-export async function revokeRole(
-  targetUserId: string,
-  role: "buyer" | "seller" | "admin"
-): Promise<ActionResult<null>> {
-  const session = await requireAuth("admin")
-  if (!(await hasPermission(session, "manage_users"))) {
+export async function blockUser(targetUserId: string): Promise<ActionResult<null>> {
+  const session = await requireAuth(UserRole.Admin)
+  if (!(await hasPermission(session, "users:update"))) {
     return { success: false, error: "You do not have permission to manage users." }
   }
-  if (role === "buyer") {
+
+  if (session.userId === targetUserId) {
+    return { success: false, error: "You cannot block your own account." }
+  }
+
+  await prisma.profile.update({
+    where: { userId: targetUserId },
+    data:  { isBlocked: true, blockedAt: new Date(), blockedBy: session.userId },
+  })
+
+  return { success: true, data: null }
+}
+
+export async function unblockUser(targetUserId: string): Promise<ActionResult<null>> {
+  const session = await requireAuth(UserRole.Admin)
+  if (!(await hasPermission(session, "users:update"))) {
+    return { success: false, error: "You do not have permission to manage users." }
+  }
+
+  await prisma.profile.update({
+    where: { userId: targetUserId },
+    data:  { isBlocked: false, blockedAt: null, blockedBy: null },
+  })
+
+  return { success: true, data: null }
+}
+
+export async function revokeRole(
+  targetUserId: string,
+  roleSlug: string,
+): Promise<ActionResult<null>> {
+  const session = await requireAuth(UserRole.Admin)
+  await requireSuperAdmin(session)
+
+  if (roleSlug === UserRole.Buyer) {
     return { success: false, error: "Cannot revoke the buyer role — all users must retain buyer access." }
   }
+
+  const profile = await prisma.profile.findUnique({ where: { userId: targetUserId } })
+  if (!profile) return { success: false, error: "User not found." }
+
+  await prisma.profile.update({
+    where: { userId: targetUserId },
+    data:  { roles: profile.roles.filter(r => r !== roleSlug) },
+  })
+
   return { success: true, data: null }
 }

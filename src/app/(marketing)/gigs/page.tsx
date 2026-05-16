@@ -1,19 +1,7 @@
 import type { Metadata } from "next"
 import { GigsView } from "@/views/marketing/gigs/GigsView/index"
 import { GigSearchParamsSchema } from "@/schemas/server/gigs"
-import type { GigCard } from "@/types/gigs"
-
-const STATIC_CATEGORIES = [
-  { name: "Development & IT",     slug: "development-it"     },
-  { name: "Design & Creative",    slug: "design-creative"    },
-  { name: "Video & Animation",    slug: "video-animation"    },
-  { name: "Writing & Translation",slug: "writing-translation"},
-  { name: "Digital Marketing",    slug: "digital-marketing"  },
-  { name: "Data & Analytics",     slug: "data-analytics"     },
-  { name: "Music & Audio",        slug: "music-audio"        },
-  { name: "Business",             slug: "business"           },
-  { name: "AI Services",          slug: "ai-services"        },
-]
+import { getCategories } from "@/actions/categories"
 
 export async function generateMetadata({
   searchParams,
@@ -44,17 +32,14 @@ export default async function GigsPage({
     ? parsed.data
     : GigSearchParamsSchema.parse({})
 
-  // TODO Phase 2 backend: replace with real DB query using safeParams
-  const gigs: GigCard[] = []
-  const total = 0
+  const categories = await getCategories()
 
   return (
     <GigsView
-      gigs={gigs}
-      total={total}
-      filters={{
+      initialFilters={{
         q:            safeParams.q,
         category:     safeParams.category,
+        subcategory:  safeParams.subcategory,
         minPrice:     safeParams.minPrice,
         maxPrice:     safeParams.maxPrice,
         deliveryDays: safeParams.deliveryDays,
@@ -62,7 +47,7 @@ export default async function GigsPage({
         minRating:    safeParams.minRating,
         sort:         safeParams.sort,
       }}
-      categories={STATIC_CATEGORIES}
+      categories={categories}
     />
   )
 }

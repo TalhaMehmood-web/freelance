@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
 
 export interface PortfolioItem {
@@ -27,13 +28,13 @@ const MOCK_ITEMS: PortfolioItem[] = [
 ]
 
 export async function getPortfolio(): Promise<ActionResult<PortfolioItem[]>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return { success: true, data: MOCK_ITEMS }
 }
 
 // MOCK Phase 2 — replace with prisma.portfolioItem.create
 export async function addPortfolioItem(input: AddPortfolioInput): Promise<ActionResult<PortfolioItem>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   const newItem: PortfolioItem = {
     id:          `port_${Date.now()}`,
     title:       input.title,
@@ -47,6 +48,6 @@ export async function addPortfolioItem(input: AddPortfolioInput): Promise<Action
 
 // MOCK Phase 2 — replace with prisma.portfolioItem.delete
 export async function deletePortfolioItem(itemId: string): Promise<ActionResult<null>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return { success: true, data: null }
 }

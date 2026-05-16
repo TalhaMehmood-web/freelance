@@ -1,126 +1,105 @@
-"use client"
+"use client";
 
-import { useState, useTransition } from "react"
-import { Shield, Lock, AlertTriangle } from "lucide-react"
-import { PERMISSION_KEYS, PERMISSION_LABELS } from "@/types/admin"
-import { setRolePermissions } from "@/actions/admin/permissions"
-import type { PermissionKey } from "@/types/admin"
+import { useState, useTransition } from "react";
+import { Shield, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { RolesTable } from "./RolesTable";
+import { PermissionsTable } from "./PermissionsTable";
+import { ResourcesTable } from "./ResourcesTable";
+import { ActionsTable } from "./ActionsTable";
+import { seedBuiltInRolesAndPermissions } from "@/actions/admin/permissions";
+
+type Tab = "roles" | "permissions" | "config";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "roles", label: "Roles" },
+  { id: "permissions", label: "Permissions" },
+  { id: "config", label: "Resources & Actions" },
+];
 
 interface PermissionsViewProps {
-  initialPermissions: PermissionKey[]
+  isSuperAdmin: boolean;
 }
 
-export function AdminPermissionsView({ initialPermissions }: PermissionsViewProps) {
-  const [permissions, setPermissions] = useState<PermissionKey[]>(initialPermissions)
-  const [saved, setSaved]             = useState(false)
-  const [error, setError]             = useState<string | null>(null)
-  const [isPending, startTransition]  = useTransition()
+export function PermissionsView({ isSuperAdmin }: PermissionsViewProps) {
+  const [activeTab, setActiveTab] = useState<Tab>("roles");
+  const [seedError, setSeedError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  function handleToggle(key: PermissionKey) {
-    if (key === "manage_permissions") return // not editable via UI
-    setError(null)
-    setSaved(false)
-    const next = permissions.includes(key)
-      ? permissions.filter(p => p !== key)
-      : [...permissions, key]
-    setPermissions(next)
-  }
-
-  function handleSave() {
-    setError(null)
-    setSaved(false)
+  function handleSeed() {
+    setSeedError(null);
     startTransition(async () => {
-      const result = await setRolePermissions("admin", permissions)
-      if (!result.success) { setError(result.error ?? "Failed to save permissions."); return }
-      setSaved(true)
-    })
+      const result = await seedBuiltInRolesAndPermissions();
+      if (!result.success) {
+        setSeedError(result.error ?? "Seed failed.");
+        return;
+      }
+      toast.success(
+        "Built-in roles, permissions, resources and actions seeded successfully.",
+      );
+    });
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="flex flex-col gap-6  min-h-full">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Role Permissions</h1>
+          <h1 className="text-2xl font-bold text-text-primary">
+            Roles &amp; Permissions
+          </h1>
           <p className="text-sm text-text-secondary mt-1">
-            Control what the Admin role can do across the platform.
+            Manage custom roles and fine-grained access control.
           </p>
         </div>
-        <button
-          disabled={isPending}
-          onClick={handleSave}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-500 text-white text-sm font-semibold rounded-xl hover:bg-brand-600 disabled:opacity-50 transition-colors"
-        >
-          <Shield className="w-4 h-4" />
-          {isPending ? "Saving…" : "Save Changes"}
-        </button>
+        {isSuperAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSeed}
+            disabled={isPending}
+          >
+            <Shield className="w-4 h-4" />
+            {isPending ? "Seeding…" : "Re-seed Built-ins"}
+          </Button>
+        )}
       </div>
 
-      {saved && (
-        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-          <Shield className="w-4 h-4 shrink-0" />
-          Permissions saved successfully.
-        </div>
-      )}
-      {error && (
+      {seedError && (
         <div className="flex items-center gap-2 text-sm text-danger-600 bg-danger-50 border border-danger-100 rounded-xl px-4 py-3">
           <AlertTriangle className="w-4 h-4 shrink-0" />
-          {error}
+          {seedError}
         </div>
       )}
 
-      {/* Role tab (single for now) */}
-      <div className="flex items-center gap-2">
-        <div className="px-4 py-2 bg-white rounded-xl border border-border shadow-sm text-sm font-semibold text-danger-600 flex items-center gap-2">
-          <Shield className="w-4 h-4" />
-          Admin
+      {/* Tab switcher */}
+      <div className="flex items-center gap-1 bg-surface-subtle border border-border rounded-xl p-1 w-fit">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? "bg-white text-text-primary shadow-sm border border-border"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "roles" && <RolesTable isSuperAdmin={isSuperAdmin} />}
+      {activeTab === "permissions" && (
+        <PermissionsTable isSuperAdmin={isSuperAdmin} />
+      )}
+      {activeTab === "config" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ResourcesTable isSuperAdmin={isSuperAdmin} />
+          <ActionsTable isSuperAdmin={isSuperAdmin} />
         </div>
-      </div>
-
-      {/* Permission matrix */}
-      <div className="bg-surface rounded-2xl border border-border shadow-card divide-y divide-border overflow-hidden">
-        {PERMISSION_KEYS.map(key => {
-          const { label, description } = PERMISSION_LABELS[key]
-          const isActive    = permissions.includes(key)
-          const isLocked    = key === "manage_permissions"
-
-          return (
-            <div key={key} className="flex items-center justify-between px-5 py-4 hover:bg-surface-subtle transition-colors">
-              <div className="flex items-center gap-3">
-                {isLocked ? (
-                  <Lock className="w-4 h-4 text-text-tertiary shrink-0" />
-                ) : (
-                  <Shield className={`w-4 h-4 shrink-0 ${isActive ? "text-brand-500" : "text-text-tertiary"}`} />
-                )}
-                <div>
-                  <p className="text-sm font-semibold text-text-primary">{label}</p>
-                  <p className="text-xs text-text-secondary">{description}</p>
-                </div>
-              </div>
-
-              <button
-                disabled={isPending || isLocked}
-                onClick={() => handleToggle(key)}
-                title={isLocked ? "Edit via database only" : undefined}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-40 ${
-                  isActive ? "bg-brand-500" : "bg-gray-200"
-                } ${isLocked ? "cursor-not-allowed" : "cursor-pointer"}`}
-              >
-                <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
-                    isActive ? "translate-x-[18px]" : "translate-x-[2px]"
-                  }`}
-                />
-              </button>
-            </div>
-          )
-        })}
-      </div>
-
-      <p className="text-xs text-text-tertiary">
-        <Lock className="inline w-3 h-3 mr-1" />
-        <strong>manage_permissions</strong> can only be granted or revoked directly in the database to prevent lockout.
-      </p>
+      )}
     </div>
-  )
+  );
 }

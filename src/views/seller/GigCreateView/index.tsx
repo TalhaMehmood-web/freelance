@@ -24,6 +24,8 @@ import {
   type GigGalleryData,
 } from "@/schemas/client/gigs"
 import { GigLivePreview } from "./GigLivePreview"
+import { GigWizardProvider } from "./GigWizardContext"
+import type { CategoryWithChildren } from "@/actions/categories"
 
 const TOTAL_STEPS = 5
 
@@ -35,7 +37,11 @@ const STEP_META = [
   { title: "Review & Publish",     subtitle: "Final check before going live" },
 ]
 
-export function GigCreateView() {
+interface GigCreateViewProps {
+  categories?: CategoryWithChildren[]
+}
+
+export function GigCreateView({ categories = [] }: GigCreateViewProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -130,6 +136,7 @@ export function GigCreateView() {
   const meta = STEP_META[currentStep - 1]
 
   return (
+    <GigWizardProvider categories={categories}>
     <div className="flex flex-col gap-0 min-h-full">
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
@@ -221,9 +228,11 @@ export function GigCreateView() {
             basicsForm={basicsForm}
             pricingForm={pricingForm}
             descriptionForm={descriptionForm}
+            galleryForm={galleryForm}
           />
         </div>
       </div>
     </div>
+    </GigWizardProvider>
   )
 }

@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
 
 export interface SellerSettingsData {
@@ -23,7 +24,7 @@ export interface SellerSettingsData {
 
 // MOCK Phase 2 — replace with prisma.sellerProfile.findUnique in Phase 3
 export async function getSellerSettings(): Promise<ActionResult<SellerSettingsData>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return {
     success: true,
     data: {
@@ -48,7 +49,7 @@ export async function getSellerSettings(): Promise<ActionResult<SellerSettingsDa
 
 // MOCK Phase 2 — replace with prisma.sellerProfile.update
 export async function updateProfile(data: Partial<SellerSettingsData>): Promise<ActionResult<null>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return { success: true, data: null }
 }
 
@@ -58,7 +59,7 @@ export async function updateAvailability(data: {
   vacationAutoReply?: string
   vacationReturnDate?: string
 }): Promise<ActionResult<null>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return { success: true, data: null }
 }
 
@@ -69,6 +70,6 @@ export async function updateNotifications(data: {
   reviews: boolean
   promotional: boolean
 }): Promise<ActionResult<null>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return { success: true, data: null }
 }

@@ -59,7 +59,7 @@ export function SellerSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="offcanvas" className="top-16 h-[calc(100svh-4rem)] border-r border-sidebar-border">
+    <Sidebar collapsible="offcanvas" className="top-16! h-[calc(100svh-4rem)]! border-r border-sidebar-border">
       <SidebarContent>
         {NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.label}>

@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
 
 export interface DashboardStats {
@@ -39,7 +40,7 @@ export interface DashboardData {
 
 // MOCK Phase 2 — replace with real Prisma queries in Phase 3
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
 
   return {
     success: true,

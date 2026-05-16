@@ -1,8 +1,46 @@
 "use client"
 
-import { ImagePlus, Info } from "lucide-react"
+import { useFormContext } from "react-hook-form"
+import { ImageUpload } from "@/components/ui/image-upload"
+import type { GigGalleryData } from "@/schemas/client/gigs"
+
+interface UploadedImage { url: string; path: string }
 
 export function Step4Gallery() {
+  const { watch, setValue } = useFormContext<GigGalleryData>()
+
+  const coverUrl    = watch("coverImageUrl") ?? ""
+  const galleryUrls = watch("galleryImages") ?? []
+
+  // Paths live alongside URLs — stored in hidden non-schema fields on the form
+  const coverPath    = (watch as any)("_coverPath")    as string | undefined
+  const galleryPaths = ((watch as any)("_galleryPaths") as string[] | undefined) ?? []
+
+  function handleCoverChange(img: UploadedImage | null) {
+    setValue("coverImageUrl", img?.url ?? "")
+    ;(setValue as any)("_coverPath", img?.path ?? "")
+  }
+
+  function handleGalleryChange(index: number, img: UploadedImage | null) {
+    const newUrls  = [...galleryUrls]
+    const newPaths = [...galleryPaths]
+
+    if (img) {
+      newUrls[index]  = img.url
+      newPaths[index] = img.path
+    } else {
+      newUrls.splice(index, 1)
+      newPaths.splice(index, 1)
+    }
+
+    setValue("galleryImages", newUrls)
+    ;(setValue as any)("_galleryPaths", newPaths)
+  }
+
+  const slots: (UploadedImage | null)[] = [0, 1, 2].map(i =>
+    galleryUrls[i] ? { url: galleryUrls[i], path: galleryPaths[i] ?? "" } : null
+  )
+
   return (
     <div className="space-y-6">
       <div>
@@ -12,48 +50,41 @@ export function Step4Gallery() {
         </p>
       </div>
 
-      {/* Cover image upload placeholder */}
-      <div>
-        <p className="text-sm font-medium text-text-primary mb-2">
-          Cover Image <span className="text-xs text-text-tertiary font-normal">(required)</span>
-        </p>
-        <div className="flex items-center justify-center aspect-[16/9] max-w-lg rounded-2xl border-2 border-dashed border-border bg-surface-subtle hover:border-brand-300 hover:bg-brand-50 transition-colors cursor-pointer group">
-          <div className="text-center">
-            <div className="h-12 w-12 rounded-xl bg-brand-100 flex items-center justify-center mx-auto mb-3 group-hover:bg-brand-200 transition-colors">
-              <ImagePlus className="h-6 w-6 text-brand-500" />
-            </div>
-            <p className="text-sm font-medium text-text-primary">Click to upload cover image</p>
-            <p className="text-xs text-text-tertiary mt-1">PNG, JPG or WebP · Max 5 MB · 16:9 recommended</p>
-          </div>
+      {/* Cover image */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <p className="text-sm font-medium text-text-primary">Cover Image</p>
+          <span className="text-xs text-danger-500">*</span>
+          <span className="text-xs text-text-tertiary ml-auto">16:9 recommended</span>
         </div>
+        <ImageUpload
+          value={coverUrl ? { url: coverUrl, path: coverPath ?? "" } : null}
+          onChange={handleCoverChange}
+          folder="gigs/covers"
+          aspectRatio="aspect-[16/9]"
+          hint="PNG, JPG or WebP · Max 3 MB · 16:9 recommended"
+          className="max-w-lg"
+        />
       </div>
 
-      {/* Additional images */}
-      <div>
-        <p className="text-sm font-medium text-text-primary mb-2">
-          Additional Images <span className="text-xs text-text-tertiary font-normal">(up to 3, optional)</span>
-        </p>
+      {/* Gallery images */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <p className="text-sm font-medium text-text-primary">Additional Images</p>
+          <span className="text-xs text-text-tertiary">(up to 3, optional)</span>
+        </div>
         <div className="grid grid-cols-3 gap-3">
-          {[1, 2, 3].map((n) => (
-            <div
-              key={n}
-              className="flex items-center justify-center aspect-[4/3] rounded-xl border-2 border-dashed border-border bg-surface-subtle hover:border-brand-300 hover:bg-brand-50 transition-colors cursor-pointer"
-            >
-              <div className="text-center">
-                <ImagePlus className="h-5 w-5 text-text-tertiary mx-auto mb-1" />
-                <p className="text-xs text-text-tertiary">Add image</p>
-              </div>
-            </div>
+          {slots.map((slot, i) => (
+            <ImageUpload
+              key={i}
+              value={slot}
+              onChange={img => handleGalleryChange(i, img)}
+              folder="gigs/gallery"
+              aspectRatio="aspect-[4/3]"
+              hint="PNG, JPG or WebP · Max 3 MB"
+            />
           ))}
         </div>
-      </div>
-
-      {/* Info notice */}
-      <div className="flex items-start gap-3 bg-brand-50 border border-brand-100 rounded-xl p-4">
-        <Info className="h-4 w-4 text-brand-500 mt-0.5 shrink-0" />
-        <p className="text-xs text-brand-700 leading-relaxed">
-          Image upload will be available once your account is connected to storage. For now, your gig will be published with a placeholder image. You can add images later from your seller dashboard.
-        </p>
       </div>
     </div>
   )

@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { MoreHorizontal, Pencil, Pause, Play, Trash2, ExternalLink, Copy } from "lucide-react"
+import { MoreHorizontal, Pencil, Pause, Play, Trash2, ExternalLink, Copy, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
@@ -21,7 +20,6 @@ interface GigActionsCellProps {
 }
 
 export function GigActionsCell({ gig, onMutate }: GigActionsCellProps) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [deleteOpen, setDeleteOpen]  = useState(false)
 
@@ -66,6 +64,10 @@ export function GigActionsCell({ gig, onMutate }: GigActionsCellProps) {
               <DropdownMenuItem render={<Link href={`/seller/gigs/${gig.id}/edit`} />}>
                 <Pencil className="w-4 h-4" />
                 Edit Gig
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href={`/gigs/${gig.slug}`} />}>
+                <Eye className="w-4 h-4" />
+                View Overview
               </DropdownMenuItem>
               <DropdownMenuItem render={<Link href={`/gigs/${gig.slug}`} target="_blank" />}>
                 <ExternalLink className="w-4 h-4" />

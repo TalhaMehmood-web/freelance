@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/server/supabase"
 import { prisma } from "@/lib/server/prisma"
 import { LoginSchema, RegisterSchema, ForgotPasswordSchema, ResetPasswordSchema } from "@/lib/shared/validations"
 import { slugify } from "@/lib/shared/utils"
+import { UserRole, ActiveRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
 
 export async function signIn(data: {
@@ -18,9 +19,26 @@ export async function signIn(data: {
   }
 
   const supabase = await createSupabaseServerClient()
-  const { error } = await supabase.auth.signInWithPassword(parsed.data)
-  if (error) {
+  const { data: authData, error } = await supabase.auth.signInWithPassword(parsed.data)
+  if (error || !authData.user) {
     return { success: false, error: "Invalid email or password." }
+  }
+
+  const profile = await prisma.profile.findUnique({
+    where: { userId: authData.user.id },
+    select: { roles: true },
+  })
+
+  const cookieStore = await cookies()
+  if (profile?.roles.includes(UserRole.Admin)) {
+    cookieStore.set("__admin", "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      secure: process.env.NODE_ENV === "production",
+    })
+    redirect("/admin/dashboard")
   }
 
   redirect("/dashboard")
@@ -63,7 +81,7 @@ export async function signUp(data: {
   })
 
   const cookieStore = await cookies()
-  cookieStore.set("__role", "buyer", {
+  cookieStore.set("__role", ActiveRole.Buyer, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -71,7 +89,7 @@ export async function signUp(data: {
     secure: process.env.NODE_ENV === "production",
   })
 
-  redirect("/buyer/dashboard")
+  redirect(`/${ActiveRole.Buyer}/dashboard`)
 }
 
 export async function forgotPassword(data: {
@@ -116,5 +134,6 @@ export async function signOut() {
   await supabase.auth.signOut()
   const cookieStore = await cookies()
   cookieStore.delete("__role")
+  cookieStore.delete("__admin")
   redirect("/login")
 }

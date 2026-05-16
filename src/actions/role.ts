@@ -5,8 +5,10 @@ import { redirect } from "next/navigation"
 import { createSupabaseServerClient } from "@/lib/server/supabase"
 import { prisma } from "@/lib/server/prisma"
 import { z } from "zod"
+import { ActiveRole } from "@/lib/shared/constants"
 
-const Schema = z.object({ role: z.enum(["buyer", "seller"]) })
+const ACTIVE_ROLE_VALUES = Object.values(ActiveRole) as [ActiveRole, ...ActiveRole[]]
+const Schema = z.object({ role: z.enum(ACTIVE_ROLE_VALUES) })
 
 export async function switchRole(formData: FormData) {
   const parsed = Schema.safeParse({ role: formData.get("role") })
@@ -18,7 +20,7 @@ export async function switchRole(formData: FormData) {
 
   const { role } = parsed.data
 
-  if (role === "seller") {
+  if (role === ActiveRole.Seller) {
     const profile = await prisma.sellerProfile.findUnique({
       where: { userId: user.id },
       select: { id: true },

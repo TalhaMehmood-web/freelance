@@ -3,9 +3,11 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 import { createSupabaseServerClient } from "@/lib/server/supabase"
 import { prisma } from "@/lib/server/prisma"
+import { ActiveRole } from "@/lib/shared/constants"
 
+const ACTIVE_ROLE_VALUES = Object.values(ActiveRole) as [ActiveRole, ...ActiveRole[]]
 const SwitchRoleSchema = z.object({
-  role: z.enum(["buyer", "seller"]),
+  role: z.enum(ACTIVE_ROLE_VALUES),
 })
 
 export async function POST(request: NextRequest) {
@@ -23,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const { role } = parsed.data
 
-  if (role === "seller") {
+  if (role === ActiveRole.Seller) {
     const sellerProfile = await prisma.sellerProfile.findUnique({
       where: { userId: user.id },
       select: { id: true },

@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import "./globals.css"
 import { Toaster } from "sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { QueryProvider } from "@/components/providers/QueryProvider"
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -70,7 +71,9 @@ export default function RootLayout({
     <html lang="en" className={`${poppins.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-surface-subtle text-text-primary font-sans antialiased">
         <Suspense>
-          <TooltipProvider>{children}</TooltipProvider>
+          <QueryProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </QueryProvider>
         </Suspense>
         <Toaster
           position="bottom-right"

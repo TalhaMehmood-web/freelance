@@ -10,8 +10,9 @@ export function proxy(request: NextRequest) {
   // ── Auth routing ────────────────────────────────────────────────────────────
 
   const hasSession =
-    request.cookies.has("sb-access-token") ||
-    request.cookies.has("sb-auth-token") ||
+    request.cookies.getAll().some(c =>
+      c.name.startsWith("sb-") && c.name.includes("-auth-token")
+    ) ||
     !!request.cookies.get("__auth")?.value
 
   // /dashboard → role-specific dashboard

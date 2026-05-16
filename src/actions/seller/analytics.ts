@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
 
 export interface AnalyticsStats {
@@ -54,6 +55,6 @@ const MOCK_BY_RANGE: Record<string, AnalyticsData> = {
 
 // MOCK Phase 2 — replace with prisma.gigAnalyticsDaily aggregation in Phase 3
 export async function getAnalytics(range: "7" | "30" | "90" = "30"): Promise<ActionResult<AnalyticsData>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return { success: true, data: MOCK_BY_RANGE[range] ?? MOCK_BY_RANGE["30"] }
 }

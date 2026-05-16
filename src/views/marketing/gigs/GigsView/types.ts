@@ -1,6 +1,7 @@
 export interface GigFilters {
   q: string
   category: string
+  subcategory: string
   minPrice: string
   maxPrice: string
   deliveryDays: string

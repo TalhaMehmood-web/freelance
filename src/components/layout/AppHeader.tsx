@@ -1,9 +1,9 @@
-import Link from "next/link"
-import { Bell, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { RoleToggle } from "@/components/shared/RoleToggle"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import Link from "next/link";
+import { Bell, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { RoleToggle } from "@/components/shared/RoleToggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,24 +12,30 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { getInitials } from "@/lib/shared/utils"
-import type { Session } from "@/types/shared"
+} from "@/components/ui/dropdown-menu";
+import { getInitials } from "@/lib/shared/utils";
+import { UserRole } from "@/lib/shared/constants";
+import type { Session } from "@/types/shared";
 
 interface AppHeaderProps {
-  variant: "marketing" | "dashboard"
-  session?: Session | null
+  variant: "marketing" | "dashboard";
+  session?: Session | null;
+  hideDefaultBell?: boolean;
+  hideRoleToggle?: boolean;
 }
 
-export async function AppHeader({ variant, session }: AppHeaderProps) {
-  const isDashboard = variant === "dashboard"
+export async function AppHeader({
+  variant,
+  session,
+  hideDefaultBell = false,
+  hideRoleToggle = false,
+}: AppHeaderProps) {
+  const isDashboard = variant === "dashboard";
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-sticky h-16 bg-surface border-b border-border flex items-center px-4 md:px-6 gap-4">
+    <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-surface border-b border-border flex items-center px-4 md:px-6 gap-4">
       {/* Sidebar trigger — mobile only, dashboard only */}
-      {isDashboard && (
-        <SidebarTrigger className="md:hidden shrink-0" />
-      )}
+      {isDashboard && <SidebarTrigger className="shrink-0" />}
 
       {/* Logo */}
       <Link
@@ -62,13 +68,22 @@ export async function AppHeader({ variant, session }: AppHeaderProps) {
           /* Unauthenticated — marketing nav */
           <>
             <nav className="hidden md:flex items-center gap-1 text-sm">
-              <Link href="/gigs" className="px-3 py-2 text-text-secondary hover:text-text-primary transition-colors">
+              <Link
+                href="/gigs"
+                className="px-3 py-2 text-text-secondary hover:text-text-primary transition-colors"
+              >
                 Browse Gigs
               </Link>
-              <Link href="/freelancers" className="px-3 py-2 text-text-secondary hover:text-text-primary transition-colors">
+              <Link
+                href="/freelancers"
+                className="px-3 py-2 text-text-secondary hover:text-text-primary transition-colors"
+              >
                 Find Talent
               </Link>
-              <Link href="/how-it-works" className="px-3 py-2 text-text-secondary hover:text-text-primary transition-colors">
+              <Link
+                href="/how-it-works"
+                className="px-3 py-2 text-text-secondary hover:text-text-primary transition-colors"
+              >
                 How it Works
               </Link>
             </nav>
@@ -83,19 +98,23 @@ export async function AppHeader({ variant, session }: AppHeaderProps) {
           /* Authenticated — dashboard nav */
           <>
             {/* Role toggle */}
-            <RoleToggle
-              activeRole={session.activeRole}
-              hasSeller={session.grantedRoles.includes("seller")}
-            />
+            {!hideRoleToggle && (
+              <RoleToggle
+                activeRole={session.activeRole}
+                hasSeller={session.grantedRoles.includes(UserRole.Seller)}
+              />
+            )}
 
             {/* Notifications */}
-            <Link
-              href={`/${session.activeRole}/notifications`}
-              className="relative p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-muted transition-colors"
-              aria-label="Notifications"
-            >
-              <Bell className="h-5 w-5" />
-            </Link>
+            {!hideDefaultBell && (
+              <Link
+                href={`/${session.activeRole}/notifications`}
+                className="relative p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-muted transition-colors"
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5" />
+              </Link>
+            )}
 
             {/* User menu */}
             <DropdownMenu>
@@ -118,16 +137,29 @@ export async function AppHeader({ variant, session }: AppHeaderProps) {
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <Link href={`/${session.activeRole}/profile`} className="w-full">Profile</Link>
+                  <Link
+                    href={`/${session.activeRole}/profile`}
+                    className="w-full"
+                  >
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link href={`/${session.activeRole}/settings`} className="w-full">Settings</Link>
+                  <Link
+                    href={`/${session.activeRole}/settings`}
+                    className="w-full"
+                  >
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
-                {session.grantedRoles.includes("admin") && (
+                {session.grantedRoles.includes(UserRole.Admin) && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
-                      <Link href="/admin/dashboard" className="w-full text-brand-600">
+                      <Link
+                        href="/admin/dashboard"
+                        className="w-full text-brand-600"
+                      >
                         Admin Panel
                       </Link>
                     </DropdownMenuItem>
@@ -135,8 +167,15 @@ export async function AppHeader({ variant, session }: AppHeaderProps) {
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <form action="/api/auth/logout" method="POST" className="w-full">
-                    <button type="submit" className="w-full text-left text-danger-600">
+                  <form
+                    action="/api/auth/logout"
+                    method="POST"
+                    className="w-full"
+                  >
+                    <button
+                      type="submit"
+                      className="w-full text-left text-danger-600"
+                    >
                       Log Out
                     </button>
                   </form>
@@ -147,5 +186,5 @@ export async function AppHeader({ variant, session }: AppHeaderProps) {
         )}
       </div>
     </header>
-  )
+  );
 }

@@ -1,193 +1,151 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { ChevronRight, Star, MessageSquare } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { SellerLevelBadge } from "@/components/freelancer/SellerLevelBadge"
-import { cn, formatCurrency, formatRating, formatNumber, getInitials } from "@/lib/shared/utils"
-import { GigGallery } from "./GigGallery"
+import { MessageSquare, Star, FileText, HelpCircle } from "lucide-react"
+import { cn, formatNumber } from "@/lib/shared/utils"
+import { GigGallery }         from "./GigGallery"
+import { GigHero }            from "./GigHero"
+import { GigHighlights }      from "./GigHighlights"
+import { GigDescription }     from "./GigDescription"
+import { GigTags }            from "./GigTags"
+import { GigFAQ }             from "./GigFAQ"
 import { GigPackageSelector } from "./GigPackageSelector"
-import { GigFAQ } from "./GigFAQ"
-import { SellerSidebar } from "./SellerSidebar"
+import { SellerSidebar }      from "./SellerSidebar"
 import type { GigDetail } from "@/types/gigs"
 
-interface GigDetailViewProps {
-  gig: GigDetail
-}
+type Tab = "overview" | "faq" | "reviews"
 
-type ActiveTab = "overview" | "reviews"
-
-export function GigDetailView({ gig }: GigDetailViewProps) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("overview")
+function TabBar({
+  active,
+  reviewCount,
+  faqCount,
+  onChange,
+}: {
+  active: Tab
+  reviewCount: number
+  faqCount: number
+  onChange: (t: Tab) => void
+}) {
+  const tabs = [
+    { key: "overview" as Tab, label: "Overview", icon: <FileText className="h-3.5 w-3.5" /> },
+    ...(faqCount > 0
+      ? [{ key: "faq" as Tab, label: `FAQ (${faqCount})`, icon: <HelpCircle className="h-3.5 w-3.5" /> }]
+      : []),
+    {
+      key: "reviews" as Tab,
+      label: reviewCount > 0 ? `Reviews (${formatNumber(reviewCount)})` : "Reviews",
+      icon: <MessageSquare className="h-3.5 w-3.5" />,
+    },
+  ]
 
   return (
-    <div className="relative min-h-screen bg-surface-subtle">
-      {/* Decorative blobs + dot pattern */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
-        <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full bg-brand-100/50 blur-3xl" />
-        <div className="absolute top-1/3 -left-40 w-80 h-80 rounded-full bg-brand-50/60 blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 1.5px 1.5px, var(--color-brand-400) 1px, transparent 0)",
-            backgroundSize: "32px 32px",
-          }}
-        />
+    <div className="flex border-b border-border">
+      {tabs.map(({ key, label, icon }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          className={cn(
+            "flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+            active === key
+              ? "border-brand-500 text-brand-600"
+              : "border-transparent text-text-secondary hover:text-text-primary hover:border-border",
+          )}
+        >
+          {icon}
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ReviewsEmpty() {
+  return (
+    <div className="py-12 flex flex-col items-center text-center">
+      <div className="w-12 h-12 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center mb-3">
+        <Star className="h-6 w-6 text-brand-300" />
       </div>
+      <p className="text-sm font-semibold text-text-primary mb-1">No reviews yet</p>
+      <p className="text-xs text-text-secondary max-w-xs">
+        Reviews will appear here once buyers rate this service.
+      </p>
+    </div>
+  )
+}
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-text-tertiary mb-6 flex-wrap">
-          <Link href="/" className="hover:text-brand-500 transition-colors">Home</Link>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-          <Link href="/gigs" className="hover:text-brand-500 transition-colors">Services</Link>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-          <Link
-            href={`/gigs?category=${gig.category.slug}`}
-            className="hover:text-brand-500 transition-colors"
-          >
-            {gig.category.name}
-          </Link>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-text-secondary truncate max-w-48">{gig.title}</span>
-          <span className="ml-auto bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1 rounded-full border border-brand-100 shrink-0">
-            Starting at {formatCurrency(gig.startingPriceCents)}
-          </span>
-        </nav>
+export function GigDetailView({ gig }: { gig: GigDetail }) {
+  const [activeTab, setActiveTab] = useState<Tab>("overview")
 
-        {/* 2-column layout */}
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* LEFT: main content */}
-          <div className="flex-1 min-w-0">
-            {/* Title */}
-            <h1 className="text-2xl font-bold text-text-primary leading-tight mb-4">
-              {gig.title}
-            </h1>
+  return (
+    <div className="min-h-screen bg-surface-subtle">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
 
-            {/* Seller info row */}
-            <div className="flex items-center gap-3 flex-wrap mb-6">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={gig.seller.avatarUrl ?? undefined} />
-                <AvatarFallback className="text-xs bg-brand-100 text-brand-700">
-                  {getInitials(gig.seller.fullName)}
-                </AvatarFallback>
-              </Avatar>
-              <Link
-                href={`/freelancers/${gig.seller.username}`}
-                className="text-sm font-medium text-text-primary hover:text-brand-500 transition-colors"
-              >
-                {gig.seller.fullName}
-              </Link>
-              <SellerLevelBadge level={gig.seller.sellerLevel} />
-              {gig.reviewCount > 0 && (
-                <div className="flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-accent-500 text-accent-500" />
-                  <span className="text-sm font-semibold text-text-primary">
-                    {formatRating(gig.avgRating)}
-                  </span>
-                  <span className="text-xs text-text-tertiary">
-                    ({formatNumber(gig.reviewCount)})
-                  </span>
-                </div>
-              )}
-              <span className="text-xs text-text-tertiary">{formatNumber(gig.orderCount)} orders</span>
-              {gig.inQueue > 0 && (
-                <span className="text-xs text-warning-500 bg-warning-100 px-2 py-0.5 rounded-full font-medium">
-                  {gig.inQueue} in queue
-                </span>
-              )}
-            </div>
+        {/* ── 2-col layout: left content + right sticky sidebar ─────────── */}
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+
+          {/* ── LEFT COLUMN ───────────────────────────────────────────── */}
+          <div className="flex-1 min-w-0 space-y-5">
+
+            {/* Hero: back + breadcrumb + title + seller + stats */}
+            <GigHero gig={gig} />
 
             {/* Gallery */}
-            <div className="mb-8">
-              <GigGallery images={gig.images} title={gig.title} />
+            <GigGallery images={gig.images} title={gig.title} />
+
+            {/* Highlights inline row */}
+            <GigHighlights gig={gig} />
+
+            {/* Package selector — mobile only */}
+            <div className="lg:hidden">
+              <GigPackageSelector packages={gig.packages} />
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-border mb-6">
-              {(["overview", "reviews"] as const).map((tab) => (
-                <Button
-                  key={tab}
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    "px-4 py-3 text-sm font-medium capitalize transition-colors border-b-2 -mb-px rounded-none h-auto hover:bg-transparent",
-                    activeTab === tab
-                      ? "border-brand-500 text-brand-600"
-                      : "border-transparent text-text-secondary hover:text-text-primary"
-                  )}
-                >
-                  {tab}
-                  {tab === "reviews" && gig.reviewCount > 0 && (
-                    <span className="ml-1.5 text-xs bg-surface-muted px-1.5 py-0.5 rounded-full text-text-tertiary">
-                      {formatNumber(gig.reviewCount)}
-                    </span>
-                  )}
-                </Button>
-              ))}
-            </div>
+            {/* Tab navigation */}
+            <TabBar
+              active={activeTab}
+              reviewCount={gig.reviewCount}
+              faqCount={gig.faqs.length}
+              onChange={setActiveTab}
+            />
 
-            {/* Tab content */}
+            {/* Tab: Overview */}
             {activeTab === "overview" && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-base font-semibold text-text-primary mb-3">
-                    About This Service
-                  </h2>
-                  <div className="text-sm text-text-secondary leading-relaxed whitespace-pre-line">
-                    {gig.description}
-                  </div>
-                </div>
-
-                {gig.tags.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">
-                      Tags
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {gig.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {gig.faqs.length > 0 && (
-                  <div>
-                    <h2 className="text-base font-semibold text-text-primary mb-4">
-                      Frequently Asked Questions
-                    </h2>
-                    <GigFAQ faqs={gig.faqs} />
-                  </div>
-                )}
+              <div className="space-y-6 pb-10">
+                <GigDescription description={gig.description} />
+                {gig.tags.length > 0 && <GigTags tags={gig.tags} />}
               </div>
             )}
 
+            {/* Tab: FAQ */}
+            {activeTab === "faq" && (
+              <div className="pb-10">
+                <GigFAQ faqs={gig.faqs} />
+              </div>
+            )}
+
+            {/* Tab: Reviews */}
             {activeTab === "reviews" && (
-              <div className="py-12 flex flex-col items-center text-center">
-                <div className="h-14 w-14 rounded-2xl bg-brand-50 flex items-center justify-center mb-4">
-                  <MessageSquare className="h-7 w-7 text-brand-300" />
-                </div>
-                <p className="text-sm text-text-secondary">Reviews coming soon.</p>
+              <div className="pb-10">
+                <ReviewsEmpty />
               </div>
             )}
           </div>
 
-          {/* RIGHT: sticky sidebar */}
-          <div className="w-full lg:w-96 shrink-0">
-            <div className="lg:sticky lg:top-6 space-y-5">
+          {/* ── RIGHT COLUMN — sticky sidebar ─────────────────────────── */}
+          <div className="hidden lg:block w-80 shrink-0">
+            <div className="sticky top-6 space-y-4">
               <GigPackageSelector packages={gig.packages} />
               <SellerSidebar seller={gig.seller} />
             </div>
           </div>
         </div>
+
+        {/* Mobile: seller card below content */}
+        <div className="lg:hidden mt-6 pb-8">
+          <SellerSidebar seller={gig.seller} />
+        </div>
+
       </div>
     </div>
   )

@@ -99,8 +99,18 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number]
 export const PROPOSAL_STATUSES = ["pending", "shortlisted", "accepted", "rejected", "withdrawn"] as const
 export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number]
 
-export const USER_ROLES = ["buyer", "seller", "admin"] as const
-export type UserRole = (typeof USER_ROLES)[number]
+export enum UserRole {
+  Buyer  = "buyer",
+  Seller = "seller",
+  Admin  = "admin",
+}
+
+export enum ActiveRole {
+  Buyer  = "buyer",
+  Seller = "seller",
+}
+
+export const USER_ROLE_VALUES = Object.values(UserRole)
 
 export const ORG_MEMBER_ROLES = ["owner", "admin", "member", "billing_manager", "viewer"] as const
 export type OrgMemberRole = (typeof ORG_MEMBER_ROLES)[number]

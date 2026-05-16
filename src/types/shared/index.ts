@@ -1,10 +1,11 @@
-import type { UserRole, OrgMemberRole, PlanTier } from "@/lib/shared/constants"
+import type { UserRole, ActiveRole, OrgMemberRole, PlanTier } from "@/lib/shared/constants"
 
 export interface Session {
   userId: string
   email: string
   grantedRoles: UserRole[]
-  activeRole: "buyer" | "seller"
+  activeRole: ActiveRole
+  isSuperAdmin: boolean
   orgId: string | null
   orgRole: OrgMemberRole | null
   orgPlan: PlanTier | null

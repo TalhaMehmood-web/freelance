@@ -1,150 +1,116 @@
 "use client"
 
 import { useState } from "react"
-import { Check, X, Clock, RefreshCw } from "lucide-react"
+import { Check, X, Clock, RefreshCw, Sparkles, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn, formatCurrency, pluralize } from "@/lib/shared/utils"
 import type { GigPackage } from "@/types/gigs"
 
-function formatRevisions(count: number): string {
-  if (count >= 99) return "Unlimited"
-  return `${count} ${pluralize(count, "revision")}`
+const PKG_COLORS: Record<string, { tab: string; card: string; price: string }> = {
+  basic:    { tab: "text-text-secondary", card: "border-border",     price: "text-text-primary" },
+  standard: { tab: "text-brand-600",      card: "border-brand-400 ring-2 ring-brand-100", price: "text-brand-600" },
+  premium:  { tab: "text-accent-600",     card: "border-accent-300", price: "text-accent-700" },
 }
 
-interface PackageColumnProps {
-  pkg: GigPackage
-  isSelected: boolean
-  allFeatures: string[]
-  onSelect: () => void
+function formatRevisions(n: number) {
+  return n >= 99 ? "Unlimited" : `${n} ${pluralize(n, "revision")}`
 }
 
-function PackageColumn({ pkg, isSelected, allFeatures, onSelect }: PackageColumnProps) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col p-4 cursor-pointer transition-all",
-        isSelected ? "bg-brand-50 border-t-2 border-t-brand-500" : "hover:bg-surface-subtle"
-      )}
-      onClick={onSelect}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && onSelect()}
-      aria-pressed={isSelected}
-    >
-      <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-1 capitalize">
-        {pkg.packageType}
-      </p>
-      <p className="text-sm font-bold text-text-primary mb-0.5">{pkg.name}</p>
-      <p className="text-2xl font-bold text-text-primary mb-3">{formatCurrency(pkg.priceCents)}</p>
-      <p className="text-xs text-text-secondary mb-4 leading-snug flex-none">{pkg.description}</p>
-
-      <div className="flex items-center gap-3 text-xs text-text-secondary mb-4">
-        <span className="flex items-center gap-1">
-          <Clock className="h-3.5 w-3.5 shrink-0" />
-          {pkg.deliveryDays}d delivery
-        </span>
-        <span className="flex items-center gap-1">
-          <RefreshCw className="h-3.5 w-3.5 shrink-0" />
-          {formatRevisions(pkg.revisions)}
-        </span>
-      </div>
-
-      <ul className="space-y-2 flex-1">
-        {allFeatures.map((feature) => {
-          const included = pkg.features.includes(feature)
-          return (
-            <li
-              key={feature}
-              className={cn(
-                "flex items-start gap-2 text-xs",
-                included ? "text-text-primary" : "text-text-tertiary"
-              )}
-            >
-              {included
-                ? <Check className="h-3.5 w-3.5 text-success-500 shrink-0 mt-0.5" />
-                : <X className="h-3.5 w-3.5 text-text-tertiary shrink-0 mt-0.5 opacity-40" />
-              }
-              <span className={cn(!included && "line-through opacity-50")}>{feature}</span>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
-  )
-}
-
-interface GigPackageSelectorProps {
-  packages: GigPackage[]
-}
-
-export function GigPackageSelector({ packages }: GigPackageSelectorProps) {
+export function GigPackageSelector({ packages }: { packages: GigPackage[] }) {
   const [selectedId, setSelectedId] = useState(packages[0]?.id ?? "")
+  if (packages.length === 0) return null
 
   const allFeatures = [...new Set(packages.flatMap((p) => p.features))]
   const selectedPkg = packages.find((p) => p.id === selectedId) ?? packages[0]
-
-  if (packages.length === 0) return null
+  const colors = PKG_COLORS[selectedPkg?.packageType ?? "basic"] ?? PKG_COLORS.basic
 
   return (
     <div className="bg-surface rounded-2xl border border-border shadow-card overflow-hidden">
-      <div className="px-5 pt-5 pb-4 border-b border-border">
-        <h3 className="text-base font-semibold text-text-primary">Select a Package</h3>
-      </div>
 
-      {/* Desktop: 3-column grid */}
-      <div className="hidden sm:grid divide-x divide-border" style={{ gridTemplateColumns: `repeat(${packages.length}, 1fr)` }}>
-        {packages.map((pkg) => (
-          <PackageColumn
-            key={pkg.id}
-            pkg={pkg}
-            isSelected={selectedId === pkg.id}
-            allFeatures={allFeatures}
-            onSelect={() => setSelectedId(pkg.id)}
-          />
-        ))}
-      </div>
-
-      {/* Mobile: tabs + single card */}
-      <div className="sm:hidden">
-        <div className="flex border-b border-border">
-          {packages.map((pkg) => (
-            <Button
+      {/* Package type tabs */}
+      <div className={cn(
+        "grid border-b border-border",
+        packages.length === 1 && "grid-cols-1",
+        packages.length === 2 && "grid-cols-2",
+        packages.length >= 3 && "grid-cols-3",
+      )}>
+        {packages.map((pkg) => {
+          const c = PKG_COLORS[pkg.packageType] ?? PKG_COLORS.basic
+          const isActive = selectedId === pkg.id
+          return (
+            <button
               key={pkg.id}
               type="button"
-              variant="ghost"
               onClick={() => setSelectedId(pkg.id)}
               className={cn(
-                "flex-1 py-3 text-sm font-medium transition-colors rounded-none h-auto hover:bg-transparent",
-                selectedId === pkg.id
-                  ? "text-brand-600 border-b-2 border-brand-500"
-                  : "text-text-secondary"
+                "relative py-3 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2",
+                isActive
+                  ? `${c.tab} border-current bg-surface`
+                  : "text-text-tertiary border-transparent hover:text-text-secondary bg-surface-subtle",
+                "not-last:border-r not-last:border-r-border",
               )}
             >
-              {pkg.name}
-            </Button>
-          ))}
-        </div>
-        {selectedPkg && (
-          <PackageColumn
-            pkg={selectedPkg}
-            isSelected
-            allFeatures={allFeatures}
-            onSelect={() => {}}
-          />
-        )}
+              {pkg.packageType === "standard" && (
+                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 -translate-y-full flex items-center gap-0.5 bg-brand-500 text-white text-2xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm">
+                  <Sparkles className="h-2.5 w-2.5" />Popular
+                </span>
+              )}
+              {pkg.packageType}
+            </button>
+          )
+        })}
       </div>
 
-      {/* CTA footer */}
-      <div className="px-5 py-4 border-t border-border bg-surface-subtle">
-        <Button className="w-full" size="lg" disabled>
-          Continue — {formatCurrency(selectedPkg?.priceCents ?? 0)}
-        </Button>
-        <p className="text-xs text-text-tertiary text-center mt-2">
-          {selectedPkg?.deliveryDays}-day delivery
-          {" · "}
-          {formatRevisions(selectedPkg?.revisions ?? 0)}
-        </p>
-      </div>
+      {/* Selected package details */}
+      {selectedPkg && (
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div>
+              <p className="text-xs text-text-tertiary mb-0.5">{selectedPkg.name}</p>
+              <p className={cn("text-2xl font-extrabold tracking-tight", colors.price)}>
+                {formatCurrency(selectedPkg.priceCents)}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-text-secondary shrink-0 pt-1">
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5 text-brand-400" />{selectedPkg.deliveryDays}d
+              </span>
+              <span className="flex items-center gap-1">
+                <RefreshCw className="h-3.5 w-3.5 text-brand-400" />
+                {selectedPkg.revisions >= 99 ? "∞" : selectedPkg.revisions}
+              </span>
+            </div>
+          </div>
+
+          <p className="text-xs text-text-secondary leading-relaxed mb-4">{selectedPkg.description}</p>
+
+          {/* Feature checklist */}
+          {allFeatures.length > 0 && (
+            <ul className="space-y-1.5 mb-5">
+              {allFeatures.map((feature) => {
+                const included = selectedPkg.features.includes(feature)
+                return (
+                  <li key={feature} className={cn("flex items-center gap-2 text-xs", included ? "text-text-primary" : "text-text-tertiary/50")}>
+                    {included
+                      ? <Check className="h-3.5 w-3.5 text-success-500 shrink-0" />
+                      : <X className="h-3.5 w-3.5 shrink-0 opacity-30" />
+                    }
+                    <span className={cn(!included && "line-through opacity-40")}>{feature}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          <Button className="w-full gap-2" size="sm" disabled>
+            <ShoppingCart className="h-3.5 w-3.5" />
+            Continue — {formatCurrency(selectedPkg.priceCents)}
+          </Button>
+          <p className="text-2xs text-text-tertiary text-center mt-1.5">
+            {formatRevisions(selectedPkg.revisions)} · {selectedPkg.deliveryDays}-day delivery
+          </p>
+        </div>
+      )}
     </div>
   )
 }

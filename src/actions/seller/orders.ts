@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
 
 export interface SellerOrderRow {
@@ -37,7 +38,7 @@ const MOCK_ORDERS: SellerOrderRow[] = [
 export async function getOrders(
   query: GetOrdersQuery = {}
 ): Promise<ActionResult<{ orders: SellerOrderRow[]; total: number; pageCount: number }>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
 
   const { status, search, page = 1, sortBy = "createdAt", sortDir = "desc" } = query
   const pageSize = 10
@@ -72,7 +73,7 @@ export interface OrderStatusCounts {
 
 // MOCK Phase 2
 export async function getOrderStatusCounts(): Promise<ActionResult<OrderStatusCounts>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return {
     success: true,
     data: {

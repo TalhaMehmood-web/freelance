@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import { getEarningsStats, getLedger } from "@/actions/seller/earnings"
 import { SellerEarningsView } from "@/views/seller/EarningsView"
 
@@ -11,7 +12,7 @@ export default async function SellerEarningsPage({
 }: {
   searchParams: Promise<{ page?: string; type?: string }>
 }) {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   const { page: pageParam, type } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1)
 

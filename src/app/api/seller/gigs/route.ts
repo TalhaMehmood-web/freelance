@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import { getSellerGigs } from "@/actions/gigs"
 import { z } from "zod"
 
@@ -13,7 +14,7 @@ const QuerySchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth("seller")
+    await requireAuth(UserRole.Seller)
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }

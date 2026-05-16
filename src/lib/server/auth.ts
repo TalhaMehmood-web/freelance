@@ -3,7 +3,8 @@ import { cookies } from "next/headers"
 import { createSupabaseServerClient } from "./supabase"
 import { prisma } from "./prisma"
 import type { Session } from "../shared/types"
-import type { UserRole, OrgMemberRole, PlanTier } from "../shared/constants"
+import { UserRole, ActiveRole } from "../shared/constants"
+import type { OrgMemberRole, PlanTier } from "../shared/constants"
 
 export async function getServerSession(): Promise<Session | null> {
   try {
@@ -16,13 +17,16 @@ export async function getServerSession(): Promise<Session | null> {
 
     const cookieStore = await cookies()
     const activeRoleCookie = cookieStore.get("__role")?.value
-    const activeRole = (activeRoleCookie === "seller" ? "seller" : "buyer") as "buyer" | "seller"
+    const activeRole = activeRoleCookie === ActiveRole.Seller ? ActiveRole.Seller : ActiveRole.Buyer
 
-    const profile = await prisma.profile.findUnique({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profile = await (prisma.profile.findUnique as any)({
       where: { userId: user.id },
       select: {
         id: true,
         roles: true,
+        isBlocked: true,
+        isSuperAdmin: true,
         sellerProfile: { select: { id: true } },
         orgMemberships: {
           where: { isActive: true },
@@ -34,7 +38,14 @@ export async function getServerSession(): Promise<Session | null> {
           take: 1,
         },
       },
-    })
+    }) as {
+      id: string
+      roles: string[]
+      isBlocked: boolean
+      isSuperAdmin: boolean
+      sellerProfile: { id: string } | null
+      orgMemberships: { orgId: string; role: string; org: { plan: string } }[]
+    } | null
 
     if (!profile) return null
 
@@ -45,6 +56,7 @@ export async function getServerSession(): Promise<Session | null> {
       email: user.email ?? "",
       grantedRoles: profile.roles as UserRole[],
       activeRole,
+      isSuperAdmin: profile.isSuperAdmin,
       orgId: orgMembership?.orgId ?? null,
       orgRole: (orgMembership?.role as OrgMemberRole) ?? null,
       orgPlan: (orgMembership?.org.plan as PlanTier) ?? null,
@@ -55,18 +67,30 @@ export async function getServerSession(): Promise<Session | null> {
   }
 }
 
-export async function requireAuth(requiredRole?: "buyer" | "seller" | "admin"): Promise<Session> {
+export async function requireAuth(requiredRole?: UserRole): Promise<Session> {
   const session = await getServerSession()
 
   if (!session) {
     redirect("/login")
   }
 
-  if (requiredRole === "admin" && !session.grantedRoles.includes("admin")) {
+  // Skip block check for admins (they need to be able to log in to unblock users)
+  if (!session.grantedRoles.includes(UserRole.Admin)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profile = await (prisma.profile.findUnique as any)({
+      where:  { userId: session.userId },
+      select: { isBlocked: true },
+    }) as { isBlocked: boolean } | null
+    if (profile?.isBlocked) {
+      redirect("/suspended")
+    }
+  }
+
+  if (requiredRole === UserRole.Admin && !session.grantedRoles.includes(UserRole.Admin)) {
     redirect("/buyer/dashboard")
   }
 
-  if (requiredRole === "seller" && !session.grantedRoles.includes("seller")) {
+  if (requiredRole === UserRole.Seller && !session.grantedRoles.includes(UserRole.Seller)) {
     redirect("/seller-setup/step-1")
   }
 

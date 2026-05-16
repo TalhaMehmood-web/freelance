@@ -3,9 +3,10 @@
 import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/shared/utils"
+import { ActiveRole } from "@/lib/shared/constants"
 
 interface RoleToggleProps {
-  activeRole: "buyer" | "seller"
+  activeRole: ActiveRole
   hasSeller: boolean
 }
 
@@ -13,7 +14,7 @@ export function RoleToggle({ activeRole, hasSeller }: RoleToggleProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
-  function handleSwitch(role: "buyer" | "seller") {
+  function handleSwitch(role: ActiveRole) {
     if (role === activeRole) return
 
     startTransition(async () => {
@@ -39,28 +40,28 @@ export function RoleToggle({ activeRole, hasSeller }: RoleToggleProps) {
       aria-label="Switch role"
     >
       <button
-        onClick={() => handleSwitch("buyer")}
+        onClick={() => handleSwitch(ActiveRole.Buyer)}
         className={cn(
           "px-3 py-1.5 rounded-md transition-all duration-150",
-          activeRole === "buyer"
+          activeRole === ActiveRole.Buyer
             ? "bg-surface text-text-primary shadow-xs"
             : "text-text-secondary hover:text-text-primary"
         )}
-        aria-pressed={activeRole === "buyer"}
+        aria-pressed={activeRole === ActiveRole.Buyer}
       >
         Buyer
       </button>
 
       {hasSeller ? (
         <button
-          onClick={() => handleSwitch("seller")}
+          onClick={() => handleSwitch(ActiveRole.Seller)}
           className={cn(
             "px-3 py-1.5 rounded-md transition-all duration-150",
-            activeRole === "seller"
+            activeRole === ActiveRole.Seller
               ? "bg-surface text-text-primary shadow-xs"
               : "text-text-secondary hover:text-text-primary"
           )}
-          aria-pressed={activeRole === "seller"}
+          aria-pressed={activeRole === ActiveRole.Seller}
         >
           Seller
         </button>

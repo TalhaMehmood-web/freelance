@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAuth } from "@/lib/server/auth"
+import { UserRole } from "@/lib/shared/constants"
 import type { ActionResult } from "@/types/shared"
 
 export interface EarningsStats {
@@ -41,7 +42,7 @@ const MOCK_LEDGER: LedgerRow[] = [
 
 // MOCK Phase 2
 export async function getEarningsStats(): Promise<ActionResult<EarningsStats>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
   return {
     success: true,
     data: {
@@ -57,7 +58,7 @@ export async function getEarningsStats(): Promise<ActionResult<EarningsStats>> {
 export async function getLedger(
   query: GetLedgerQuery = {}
 ): Promise<ActionResult<{ entries: LedgerRow[]; total: number; pageCount: number }>> {
-  await requireAuth("seller")
+  await requireAuth(UserRole.Seller)
 
   const { type, page = 1, sortDir = "desc" } = query
   const pageSize = 10
