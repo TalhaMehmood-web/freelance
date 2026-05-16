@@ -16,7 +16,7 @@ export async function getAllPermissions(): Promise<ActionResult<PermissionRow[]>
   const rows = await prisma.permission.findMany({ orderBy: [{ resource: "asc" }, { action: "asc" }] })
   return {
     success: true,
-    data: rows.map(r => ({
+    data: rows.map((r: (typeof rows)[number]) => ({
       id:          r.id,
       key:         r.key,
       label:       r.label,
@@ -123,7 +123,7 @@ export async function getAllRoles(): Promise<ActionResult<RoleRow[]>> {
   const rows = await prisma.role.findMany({ orderBy: { createdAt: "asc" } })
   return {
     success: true,
-    data: rows.map(r => ({
+    data: rows.map((r: (typeof rows)[number]) => ({
       id:          r.id,
       slug:        r.slug,
       label:       r.label,
